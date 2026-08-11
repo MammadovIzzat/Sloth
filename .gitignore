@@ -14,8 +14,10 @@ scans.db-shm
 # and the target ranges.
 runs/
 
-# Screenshots of client web services.
-screenshots/
+# Screenshots of client web services captured during scans. Root-anchored on
+# purpose: an unanchored 'screenshots/' would also swallow docs/screenshots/,
+# which holds the README images.
+/screenshots/
 
 # Recovered scan data and stray masscan state from earlier runs.
 legacy_scans_backup.json

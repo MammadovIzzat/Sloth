@@ -5,6 +5,35 @@ inside **projects**; each project holds **tasks** (one target range each), and a
 task's findings are written to SQLite as they arrive — so you can close the tab,
 restart the server, and open the project later to read the results.
 
+## Screenshots
+
+Every scan belongs to a project; ad-hoc runs land in "Quick scans".
+
+![Projects dashboard](docs/screenshots/dashboard.png)
+
+A project holds tasks — one target range each — with every host it has found
+across all of them.
+
+![A project: tasks, hosts and saved nmap reports](docs/screenshots/project.png)
+
+Results stream in live. Hosts render as a table (one row per port, for a sweep
+that turned up dozens) or as cards, and the scanner's own output sits alongside
+so a scan that found nothing still explains itself.
+
+![A finished scan: results, scanner log and controls](docs/screenshots/task.png)
+
+Each run picks its own engine and discovery probe, and every choice states the
+trade-off it carries.
+
+![Starting a scan: engine and host-discovery options](docs/screenshots/new-task.png)
+
+Per-host nmap scans are saved in full, script output included.
+
+![Saved nmap report](docs/screenshots/nmap-report.png)
+
+Regenerate with `./make-screenshots.py` — it renders the real pages against a
+throwaway database of invented data.
+
 ## Install
 
 From the Debian package (Debian, Ubuntu, Kali):

@@ -40,6 +40,7 @@ ALLOW = [
     ("static", "**/*.svg"),
     ("packaging", "*"),
     (".", "extract-design.py"),
+    (".", "make-screenshots.py"),
 ]
 LEGACY = (".", "scanner_v1_backup.py")
 
