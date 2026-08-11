@@ -1,0 +1,41 @@
+[Unit]
+Description=Sloth web interface
+Documentation=file:///usr/share/doc/sloth/README.md
+After=network.target
+
+[Service]
+Type=simple
+# Runs unprivileged. The scanners need raw sockets, which arrive as ambient
+# capabilities rather than by running the whole web application as root —
+# children inherit these across exec, so masscan and fping still work.
+User=sloth
+Group=sloth
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+
+# /usr/lib is not writable by the service account, so let Python skip trying to
+# cache bytecode there rather than failing on every import.
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=-/etc/sloth/sloth.conf
+ExecStart=/usr/bin/sloth
+Restart=on-failure
+RestartSec=5
+
+StateDirectory=sloth
+WorkingDirectory=/var/lib/sloth
+
+# The service shells out to scanners, so it cannot be locked down completely,
+# but everything not needed is still closed off.
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sloth
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

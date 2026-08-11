@@ -1,0 +1,8 @@
+#!/bin/sh
+# Sloth launcher installed as /usr/bin/sloth.
+set -e
+# The application lives under /usr/lib, which is not writable at runtime — don't
+# let Python attempt to drop __pycache__ there on every import.
+PYTHONDONTWRITEBYTECODE=1
+export PYTHONDONTWRITEBYTECODE
+exec /usr/bin/python3 /usr/lib/sloth/scanner.py "$@"

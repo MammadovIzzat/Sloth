@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Saved nmap scans · Sloth{% endblock %}
+
+{% block content %}
+<div class="wrap">
+    <div class="page-head">
+        <div>
+            <h3>Saved nmap scans</h3>
+            <p class="sub">
+                {{ scans|length }}{% if truncated %} of {{ total }}{% endif %} report(s),
+                newest first.
+            </p>
+        </div>
+        {% if truncated %}
+        <div class="page-actions">
+            <a class="btn btn-ghost" href="{{ url_for('reports.list_scans', all=1) }}">
+                Show all {{ total }}</a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if scans %}
+    <div class="card elev-sm" style="padding:var(--space-2) var(--space-4) var(--space-4);
+         overflow-x:auto">
+        <table class="table" style="min-width:520px">
+            <thead><tr>
+                <th style="width:130px">Host</th><th style="width:160px">When</th>
+                <th>Project / task</th><th style="width:110px">Tool</th>
+            </tr></thead>
+            <tbody>
+            {% for s in scans %}
+            <tr>
+                <td><a class="host-ip" href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}">{{ s['ip'] }}</a></td>
+                <td class="cell-muted">{{ s['created_at'] }}</td>
+                <td class="cell-muted">
+                    {{ s['project_name'] or '—' }}{% if s['task_name'] %} / {{ s['task_name'] }}{% endif %}
+                </td>
+                <td class="cell-muted">{{ s['tool'] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
+        <p class="sub">No saved nmap scans yet. Rescan a host from a task to create one.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

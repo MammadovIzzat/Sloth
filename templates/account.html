@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Account · Sloth{% endblock %}
+
+{% block content %}
+<div style="max-width:640px">
+    <div class="page-head">
+        <div>
+            <h3>{{ user['username'] }}</h3>
+            <p class="sub">
+                Created {{ user['created_at'] }} · last sign-in {{ user['last_login'] or '—' }}
+            </p>
+        </div>
+    </div>
+
+    <div class="card elev-sm" style="padding:var(--space-6);margin-bottom:var(--space-4)">
+        <h6 class="card-kicker" style="margin:0 0 var(--space-4)">Change password</h6>
+        <form method="post" action="{{ url_for('auth.change_password') }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="field">
+                <label for="ac-cur">Current password</label>
+                <input id="ac-cur" class="input" name="current_password" type="password"
+                       autocomplete="current-password" required>
+            </div>
+            <div class="grid-2" style="margin-top:var(--space-4)">
+                <div class="field">
+                    <label for="ac-new">New password</label>
+                    <input id="ac-new" class="input" name="new_password" type="password"
+                           autocomplete="new-password" minlength="{{ min_length }}" required>
+                </div>
+                <div class="field">
+                    <label for="ac-conf">Confirm</label>
+                    <input id="ac-conf" class="input" name="confirm" type="password"
+                           autocomplete="new-password" minlength="{{ min_length }}" required>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="margin-top:var(--space-4)">Update password</button>
+        </form>
+    </div>
+
+    <div class="card elev-sm" style="padding:var(--space-6)">
+        <h6 class="card-kicker" style="margin:0 0 var(--space-2)">API token</h6>
+        <p class="sub" style="margin-bottom:var(--space-4);line-height:1.7">
+            For curl and scripts. Send it as
+            <code>Authorization: Bearer &lt;token&gt;</code> or
+            <code>X-API-Token: &lt;token&gt;</code>. Only the hash is stored, so a
+            token is shown once and cannot be recovered — generating a new one
+            replaces the old.
+        </p>
+        <p style="margin-bottom:var(--space-4)">
+            {% if has_token %}
+            <span class="tag tag-ok">a token is active</span>
+            {% else %}
+            <span class="tag tag-neutral">no token issued</span>
+            {% endif %}
+        </p>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+            <form method="post" action="{{ url_for('auth.rotate_token') }}">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn btn-primary">
+                    <i class="ph ph-key"></i>{{ 'Regenerate' if has_token else 'Generate' }} token</button>
+            </form>
+            {% if has_token %}
+            <form method="post" action="{{ url_for('auth.rotate_token') }}">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="revoke" value="1">
+                <button class="btn btn-ghost">Revoke</button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="card" style="padding:var(--space-3);margin-top:var(--space-4);
+             background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+            <pre class="raw">curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:9998/tasks/&lt;id&gt;/state</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

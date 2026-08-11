@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sloth{% endblock %}</title>
+    {# Nocturne is served locally — no CDN, so the interface still renders on a
+       client network with no route out. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nocturne.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sloth.css', v=asset_version) }}">
+</head>
+<body>
+
+{% if not current_user() %}
+    {# Signed out: split screen, form on the left. #}
+    <div class="auth">
+        <div class="auth-form">
+            <a href="{{ url_for('projects.index') }}" class="brand brand-lg">
+                <span class="brand-mark"><i class="ph ph-scan"></i></span>
+                <span class="brand-word">sloth</span>
+            </a>
+            {% include "_flash.html" %}
+            {% block auth_content %}{% endblock %}
+        </div>
+        <div class="auth-aside">
+            <p>Discovery first, then only the hosts that answered — everything
+               accumulates, nothing is replaced</p>
+        </div>
+    </div>
+{% else %}
+<div class="shell">
+
+    <aside class="sidebar">
+        <a href="{{ url_for('projects.index') }}" class="brand">
+            <span class="brand-mark"><i class="ph ph-scan"></i></span>
+            <span class="brand-word">sloth</span>
+        </a>
+
+        <nav class="nav nav-stack">
+            <a href="{{ url_for('projects.index') }}"
+               {% if nav_section == 'projects' %}aria-current="page"{% endif %}>
+                <i class="ph ph-folders"></i>Projects</a>
+            <a href="{{ url_for('reports.list_scans') }}"
+               {% if nav_section == 'scans' %}aria-current="page"{% endif %}>
+                <i class="ph ph-file-text"></i>Saved nmap scans</a>
+            <a href="{{ url_for('auth.account') }}"
+               {% if nav_section == 'account' %}aria-current="page"{% endif %}>
+                <i class="ph ph-user-circle"></i>Account</a>
+        </nav>
+
+        <div class="side-group">
+            <div class="side-head">
+                <h6>Projects</h6>
+                <a href="#" title="New project" data-dialog-open="dlg-project">
+                    <i class="ph ph-plus"></i></a>
+            </div>
+            <nav class="nav nav-stack">
+                {% for p in (sidebar_projects or []) %}
+                <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
+                   {% if p['id'] == current_project_id %}aria-current="page"{% endif %}
+                   class="side-project">
+                    {# A running scan pulses; anything else is a static dot. #}
+                    <span class="dot {{ 'dot-live' if p['running_count'] else '' }}"></span>
+                    <span class="ellipsis">{{ p['name'] }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <div class="side-foot">
+            <a href="{{ url_for('auth.account') }}" class="side-user">
+                <i class="ph ph-user"></i>{{ current_user()['username'] }}</a>
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button title="Sign out" class="icon-link"><i class="ph ph-sign-out"></i></button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="main">
+        {% include "_flash.html" %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+{% block dialogs %}{% endblock %}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/dialogs.js', v=asset_version) }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,29 @@
+{# Shared by the dashboard and the sidebar's + button. #}
+<div class="dialog-backdrop hidden" id="dlg-project">
+    <form class="dialog" method="post" action="{{ url_for('projects.create_project') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="row-between">
+            <span class="dialog-title">New project</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            <div class="field">
+                <label for="np-name">Name</label>
+                <input id="np-name" class="input" name="name" placeholder="Acme Corp — internal" required>
+            </div>
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="np-client">Client / scope</label>
+                <input id="np-client" class="input" name="client" placeholder="optional">
+            </div>
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="np-desc">Description</label>
+                <textarea id="np-desc" class="input" name="description" rows="3"
+                          placeholder="Engagement notes, rules of engagement, …"></textarea>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+            <button class="btn btn-primary" type="submit">Create project</button>
+        </div>
+    </form>
+</div>

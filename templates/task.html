@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}{{ task['name'] }} · {{ task['project_name'] }}{% endblock %}
+
+{% block content %}
+<div class="wrap">
+    <div class="page-head">
+        <div style="min-width:0">
+            <p class="card-kicker" style="margin:0 0 6px">
+                <a href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}"
+                   style="color:inherit">{{ task['project_name'] }}</a>
+            </p>
+            <h3 style="word-break:break-all">{{ task['name'] }}</h3>
+            <p class="sub" style="margin-top:6px">
+                <span class="host-ip">{{ task['target'] }}</span>
+                {% if host_count %} · {{ '{:,}'.format(host_count) }} addresses{% endif %}
+                {% if task['tcp_ports'] %} · TCP {{ task['tcp_ports'] }}{% endif %}
+                {% if task['udp_ports'] %} · UDP {{ task['udp_ports'] }}{% endif %}
+                {% if task['top_ports'] %} · top {{ task['top_ports'] }} ports{% endif %}
+                {% if task['scan_type'] == 'full' and task['engine'] == 'masscan' %}
+                    · {{ task['rate'] }} pkts/s
+                    · {{ task['retries'] if task['retries'] is not none else '?' }} retries
+                {% endif %}
+            </p>
+            <p style="margin-top:9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+                <span class="tag tag-outline">
+                    {{ {'full':'full port scan','quick':'quick scan',
+                        'discovery':'host discovery'}.get(task['scan_type'], task['scan_type']) }}
+                    {%- if task['scan_type'] == 'full' %} · {{ task['engine'] }}{% endif -%}
+                </span>
+                {% if discovery_label %}
+                <span class="card-meta">🔎 {{ discovery_label }}</span>
+                {% else %}
+                <span class="card-meta">no host discovery — every address gets scanned</span>
+                {% endif %}
+            </p>
+            {% if task['notes'] %}<p class="sub" style="margin-top:8px">{{ task['notes'] }}</p>{% endif %}
+        </div>
+
+        <div class="page-actions">
+            <span id="phaseBadge" class="tag hidden"></span>
+            <span id="statusBadge" class="tag"></span>
+            <button id="settingsBtn" class="btn btn-ghost" title="Change what this run does">
+                <i class="ph ph-sliders-horizontal"></i>Scan</button>
+            <button id="startBtn" class="btn btn-primary"><i class="ph ph-play"></i>Start</button>
+            <button id="resumeFileBtn" class="btn btn-ghost hidden"
+                    title="Continue from masscan's saved paused.conf">
+                <i class="ph ph-arrow-u-down-left"></i>Resume saved</button>
+            <button id="pauseBtn" class="btn btn-ghost hidden"><i class="ph ph-pause"></i>Pause</button>
+            <button id="stopBtn" class="btn btn-ghost hidden"><i class="ph ph-stop"></i>Stop</button>
+        </div>
+    </div>
+
+    <div id="progressWrap" class="hidden" style="margin-bottom:var(--space-6)">
+        <div class="progress-meta">
+            <span id="progressLabel">0.00% done</span>
+            <span id="rateLabel"></span>
+        </div>
+        <div class="progress-track"><div id="progressBar" class="progress-bar" style="width:0%"></div></div>
+    </div>
+
+    {# A task is a target, not one fixed scan: change these and press Start and
+       the new run's findings accumulate against the same task. #}
+    <form id="runSettings" class="card elev-sm hidden" data-scan-form
+          style="padding:var(--space-6);margin-bottom:var(--space-6)">
+        <div class="grid-2">
+            <div class="field">
+                <label for="cfgScanType">Scan type</label>
+                <select id="cfgScanType" class="input" data-scan-type>
+                    {% for key, label in scan_types.items() %}
+                    <option value="{{ key }}" {{ 'selected' if key == task['scan_type'] }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint" data-type-help></p>
+            </div>
+            <div class="field" data-when="full">
+                <label for="cfgEngine">Engine</label>
+                <select id="cfgEngine" class="input" data-scan-engine>
+                    {% for key, meta in engines.items() %}
+                    <option value="{{ key }}" {{ 'selected' if key == task['engine'] }}
+                            data-note="{{ meta['note'] }}">{{ meta['label'] }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint" data-engine-help></p>
+            </div>
+        </div>
+
+        <div class="field" style="margin-top:var(--space-4)">
+            <label for="cfgDiscovery">Host discovery</label>
+            <select id="cfgDiscovery" class="input" data-scan-discovery>
+                <option value="">None — scan every address</option>
+                {% for p in discovery_profiles %}
+                <option value="{{ p['key'] }}" {{ 'selected' if p['key'] == task['discovery'] }}
+                        data-note="{{ p['description'] }}" data-tool="{{ p['tool'] }}"
+                        data-local="{{ 1 if p['local_only'] else 0 }}">{{ p['label'] }}</option>
+                {% endfor %}
+            </select>
+            <p class="hint" data-discovery-help></p>
+        </div>
+
+        <div class="grid-2" style="margin-top:var(--space-4)" data-when="full">
+            <div class="field">
+                <label for="cfgTcp">TCP ports</label>
+                <input id="cfgTcp" class="input" value="{{ task['tcp_ports'] or '1-65535' }}">
+            </div>
+            <div class="field">
+                <label for="cfgUdp">UDP ports</label>
+                <input id="cfgUdp" class="input" value="{{ task['udp_ports'] or '' }}" placeholder="blank = skip">
+            </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:var(--space-4)" data-when="quick">
+            <div class="field">
+                <label for="cfgTop">Top ports</label>
+                <input id="cfgTop" class="input" type="number" min="1" max="65535"
+                       value="{{ task['top_ports'] or 1000 }}">
+            </div>
+            <div class="field">
+                <label for="cfgNmapPorts">Or explicit range</label>
+                <input id="cfgNmapPorts" class="input" placeholder="e.g. 1-65535">
+            </div>
+        </div>
+
+        <div data-when="full" data-engine="masscan">
+            <div class="grid-2" style="margin-top:var(--space-4)">
+                <div class="field">
+                    <label for="cfgRate">Rate (pkts/s)</label>
+                    <input id="cfgRate" class="input" type="number" min="100" value="{{ task['rate'] or 1000 }}">
+                </div>
+                <div class="field">
+                    <label for="cfgRetries">Retries</label>
+                    <input id="cfgRetries" class="input" type="number" min="0" max="10"
+                           value="{{ task['retries'] if task['retries'] is not none else 3 }}">
+                </div>
+            </div>
+        </div>
+
+        <p class="hint" style="margin-top:var(--space-4)">
+            Findings from every run accumulate against this task — nothing is replaced.
+        </p>
+    </form>
+
+    <div id="networkAlertBox" class="hidden" style="margin-bottom:var(--space-6)"></div>
+
+    <div class="split">
+        <div class="split-main">
+            <div class="row-between" style="margin-bottom:var(--space-3)">
+                <div style="display:flex;align-items:baseline;gap:10px">
+                    <h6 class="card-kicker" style="margin:0">Hosts and open ports</h6>
+                    <span id="hostCount" class="host-meta"></span>
+                </div>
+                <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap">
+                    <div class="seg">
+                        <label class="seg-opt"><input type="radio" name="hostview" value="table" checked>
+                            <i class="ph ph-rows"></i>Table</label>
+                        <label class="seg-opt"><input type="radio" name="hostview" value="cards">
+                            <i class="ph ph-squares-four"></i>Cards</label>
+                    </div>
+                    <div style="display:flex;gap:14px;font-size:12px;align-items:center">
+                        <span class="host-meta">Export</span>
+                        {% for fmt in ('html', 'txt', 'json') %}
+                        <a href="{{ url_for('reports.export_task', task_id=task['id'], format=fmt) }}">{{ fmt|upper }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {# Both views are rendered; the toggle shows one. task.js keeps them
+               in step as findings stream in. #}
+            <div id="resultsTable" class="card elev-sm"
+                 style="padding:var(--space-2) var(--space-4) var(--space-4);overflow-x:auto">
+                <table class="table" style="min-width:440px">
+                    <thead><tr>
+                        <th style="width:24%">Host</th><th style="width:18%">Port</th>
+                        <th>Service</th><th style="width:18%">Source</th>
+                    </tr></thead>
+                    <tbody id="resultsRows">
+                    {% for h in hosts %}{% for p in h['ports'] %}
+                        <tr class="host-row" data-ip="{{ h['ip'] }}" data-port="{{ p['port'] }}/{{ p['proto'] }}">
+                            <td class="cell-ip">{{ h['ip'] }}</td>
+                            <td class="cell-port">{{ p['port'] }}/{{ p['proto'] }}</td>
+                            <td class="cell-svc">{{ p['service'] or '—' }}</td>
+                            <td class="cell-src">{{ p['source'] }}</td>
+                        </tr>
+                    {% endfor %}{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="resultsCards" class="stack" hidden>
+                {% for h in hosts %}
+                <div class="host card elev-sm host-card" data-ip="{{ h['ip'] }}">
+                    <div class="host-head">
+                        <div class="host-id">
+                            <span class="host-ip">{{ h['ip'] }}</span>
+                            <span class="host-meta">
+                                {%- if h.get('discovered_by') %}{{ h['discovered_by'] }}{% endif -%}
+                                {%- if h.get('discovered_by') and h['ports'] %} · {% endif -%}
+                                {%- if h['ports'] %}{{ h['ports']|length }} ports{% endif -%}
+                            </span>
+                        </div>
+                        <div class="host-actions"></div>
+                    </div>
+                    <div class="ports ports-container" {% if not h['ports'] %}data-alive="1"{% endif %}>
+                        {% if not h['ports'] %}
+                        <span class="host-empty">host is up — no open ports recorded</span>
+                        {% endif %}
+                        {% for p in h['ports'] %}
+                        <span class="tag tag-neutral port {{ 'port-filtered' if not p['state'].startswith('open') }}"
+                              data-port="{{ p['port'] }}/{{ p['proto'] }}"
+                              title="{{ p['state'] }} · found by {{ p['source'] }}">
+                            <span class="port-num">{{ p['port'] }}/{{ p['proto'] }}</span>
+                            {% if p['service'] %}<span class="port-svc">{{ p['service'] }}</span>{% endif %}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div id="emptyState" class="card elev-sm {{ 'hidden' if hosts }}"
+                 style="padding:var(--space-8);text-align:center">
+                <p class="sub">Nothing found yet. Press Start to run this task.</p>
+            </div>
+        </div>
+
+        <aside class="split-aside">
+            <div class="card elev-sm log-card" style="padding:var(--space-4)">
+                <div class="log-head">
+                    <h6 class="card-kicker" style="margin:0">Scanner output</h6>
+                    {# Mirrors the task state, so the panel shows life at a glance. #}
+                    <span id="logDot" class="dot"></span>
+                </div>
+                <pre id="logBox" class="log">{{ scan_log }}</pre>
+            </div>
+
+            {% if nmap_scans %}
+            <div class="card elev-sm" style="padding:var(--space-4)">
+                <h6 class="card-kicker" style="margin:0 0 10px">Nmap reports</h6>
+                <div id="nmapList" style="display:flex;flex-direction:column;gap:6px">
+                    {% for s in nmap_scans %}
+                    <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}"
+                       style="font-size:12px" class="ellipsis">
+                        {{ s['ip'] }} · {{ s['created_at']|shortdate }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
+                  onsubmit="return confirm('Delete this task and its findings?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost" style="font-size:12px;color:#ffb4b6">Delete task</button>
+            </form>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.TASK = {
+    id: {{ task['id']|tojson }},
+    status: {{ task['status']|tojson }},
+    isActive: {{ is_active|tojson }},
+    isPaused: {{ is_paused|tojson }},
+    canResume: {{ can_resume|tojson }},
+    rescanning: {{ rescanning|tojson }},
+    autostart: {{ autostart|tojson }},
+    csrf: {{ csrf_token()|tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/scan-fields.js', v=asset_version) }}"></script>
+<script src="{{ url_for('static', filename='js/task.js', v=asset_version) }}"></script>
+{% endblock %}

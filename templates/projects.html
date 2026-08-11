@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Projects · Sloth{% endblock %}
+
+{% block content %}
+<div class="wrap">
+    <div class="page-head">
+        <div>
+            <h3>Projects</h3>
+            <p class="sub">Every scan belongs to a project. Ad-hoc runs land in Quick scans.</p>
+        </div>
+        <div class="page-actions">
+            {% if show == 'active' and archived_count %}
+            <a class="btn btn-ghost" href="{{ url_for('projects.index', show='all') }}">
+                <i class="ph ph-archive"></i>Show {{ archived_count }} archived</a>
+            {% elif show != 'active' %}
+            <a class="btn btn-ghost" href="{{ url_for('projects.index') }}">
+                <i class="ph ph-archive"></i>Hide archived</a>
+            {% endif %}
+            <button class="btn btn-secondary" data-dialog-open="dlg-quick">
+                <i class="ph ph-lightning"></i>Quick scan</button>
+            <button class="btn btn-primary" data-dialog-open="dlg-project">
+                <i class="ph ph-plus"></i>New project</button>
+        </div>
+    </div>
+
+    {% if active_task %}
+    <a class="card elev-sm" style="padding:14px var(--space-6);margin-bottom:var(--space-6);
+       display:flex;align-items:center;gap:10px;color:var(--color-text)"
+       href="{{ url_for('scan.task_detail', task_id=active_task) }}">
+        <span class="dot dot-live"></span>
+        <span style="font-size:13px">A scan is running — open it</span>
+    </a>
+    {% endif %}
+
+    <div class="stack">
+        {% for p in projects %}
+        <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
+           class="card elev-sm"
+           style="padding:var(--space-6);flex-direction:row;align-items:flex-start;
+                  justify-content:space-between;gap:var(--space-8);color:var(--color-text)">
+            <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                    <span class="card-title">{{ p['name'] }}</span>
+                    {% if p['running_count'] %}
+                    <span class="tag tag-run">scanning</span>
+                    {% elif p['status'] != 'active' %}
+                    <span class="tag tag-neutral">{{ p['status'] }}</span>
+                    {% endif %}
+                </div>
+                {% if p['client'] %}
+                <p class="card-kicker" style="margin:5px 0 0">{{ p['client'] }}</p>
+                {% endif %}
+                {% if p['description'] %}
+                <p class="sub" style="margin:6px 0 0;max-width:60ch">{{ p['description'] }}</p>
+                {% endif %}
+                <p class="card-meta" style="margin-top:12px">updated {{ p['updated_at'] }}</p>
+            </div>
+            <div style="text-align:right;flex:none;font-size:12px;line-height:1.9;
+                        color:color-mix(in srgb, var(--color-text) 55%, transparent)">
+                <div><b style="color:var(--color-text)">{{ p['task_count'] }}</b> tasks</div>
+                <div><b style="color:var(--color-text)">{{ p['host_count'] }}</b> hosts</div>
+                <div><b style="color:var(--color-text)">{{ p['finding_count'] }}</b> ports</div>
+            </div>
+        </a>
+        {% else %}
+        <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
+            <p class="sub">No projects yet. Create one, or run a quick scan.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block dialogs %}
+{% include "_dialog_project.html" %}
+
+<div class="dialog-backdrop hidden" id="dlg-quick">
+    <form class="dialog" method="post" action="{{ url_for('projects.quick_scan') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="row-between">
+            <span class="dialog-title">Quick scan</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            <p class="hint" style="margin:0 0 var(--space-4)">
+                Files itself under a “Quick scans” project.
+            </p>
+            <div class="field">
+                <label for="q-target">Target (IP, CIDR or range)</label>
+                <input id="q-target" class="input" name="target" placeholder="10.0.0.0/24" required>
+            </div>
+            <div class="grid-2" style="margin-top:var(--space-4)">
+                <div class="field">
+                    <label for="q-tcp">TCP ports</label>
+                    <input id="q-tcp" class="input" name="tcp_ports" value="1-65535">
+                </div>
+                <div class="field">
+                    <label for="q-udp">UDP ports</label>
+                    <input id="q-udp" class="input" name="udp_ports" placeholder="blank = skip">
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:var(--space-4)">
+                <div class="field">
+                    <label for="q-rate">Rate (pkts/s)</label>
+                    <input id="q-rate" class="input" name="rate" type="number" min="100" value="1000">
+                </div>
+                <div class="field">
+                    <label for="q-octet">Start IP (last octet)</label>
+                    <input id="q-octet" class="input" name="start_octet" type="number"
+                           min="1" max="254" placeholder="optional">
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+            <button class="btn btn-primary" type="submit"><i class="ph ph-play"></i>Start scan</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

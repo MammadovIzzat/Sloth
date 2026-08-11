@@ -1,0 +1,117 @@
+{# New scan task. The scan-type selector shows only the fields that type uses;
+   scan-fields.js drives that, and the same script runs the task page's panel. #}
+<div class="dialog-backdrop hidden" id="dlg-task">
+    <form class="dialog" method="post" data-scan-form
+          action="{{ url_for('projects.create_task', project_id=project['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="row-between">
+            <span class="dialog-title">New scan task</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            <div class="field">
+                <label for="nt-target">Target (IP, CIDR or range)</label>
+                <input id="nt-target" class="input" name="target"
+                       placeholder="10.0.0.0/24 or 10.0.0.5-10.0.0.90" required>
+            </div>
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="nt-name">Task name</label>
+                <input id="nt-name" class="input" name="name" placeholder="defaults to the target">
+            </div>
+
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="nt-type">Scan type</label>
+                <select id="nt-type" class="input" name="scan_type" data-scan-type>
+                    {% for key, label in scan_types.items() %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint" data-type-help></p>
+            </div>
+
+            <div class="field" style="margin-top:var(--space-4)" data-when="full">
+                <label for="nt-engine">Engine</label>
+                <select id="nt-engine" class="input" name="engine" data-scan-engine>
+                    {% for key, meta in engines.items() %}
+                    <option value="{{ key }}" {{ 'selected' if key == defaults['engine'] }}
+                            data-note="{{ meta['note'] }}">{{ meta['label'] }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint" data-engine-help></p>
+            </div>
+
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="nt-disc">Host discovery</label>
+                <select id="nt-disc" class="input" name="discovery" data-scan-discovery>
+                    <option value="">None — scan every address in the range</option>
+                    {% for p in discovery_profiles %}
+                    <option value="{{ p['key'] }}" {{ 'selected' if p['key'] == defaults['discovery'] }}
+                            data-note="{{ p['description'] }}" data-tool="{{ p['tool'] }}"
+                            data-local="{{ 1 if p['local_only'] else 0 }}">{{ p['label'] }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint" data-discovery-help></p>
+            </div>
+
+            <div class="grid-2" style="margin-top:var(--space-4)" data-when="full">
+                <div class="field">
+                    <label for="nt-tcp">TCP ports</label>
+                    <input id="nt-tcp" class="input" name="tcp_ports" value="{{ defaults['tcp'] }}">
+                </div>
+                <div class="field">
+                    <label for="nt-udp">UDP ports</label>
+                    <input id="nt-udp" class="input" name="udp_ports" placeholder="blank = skip">
+                </div>
+            </div>
+
+            <div data-when="quick">
+                <div class="field" style="margin-top:var(--space-4)">
+                    <label for="nt-top">Top ports</label>
+                    <input id="nt-top" class="input" name="top_ports" type="number"
+                           min="1" max="65535" value="{{ defaults['top_ports'] }}">
+                    <p class="hint">nmap's most common ports, by frequency. 1000 is nmap's own default.</p>
+                </div>
+                <div class="field" style="margin-top:var(--space-4)">
+                    <label for="nt-np">Or an explicit range</label>
+                    <input id="nt-np" class="input" name="nmap_ports" placeholder="e.g. 1-65535 — overrides top ports">
+                    <p class="hint">Slower than masscan but nmap retransmits, so it doesn't lose
+                       ports to packet loss. Use 1-65535 when a masscan sweep looks thin.</p>
+                </div>
+            </div>
+
+            <div data-when="full" data-engine="masscan">
+                <div class="grid-2" style="margin-top:var(--space-4)">
+                    <div class="field">
+                        <label for="nt-rate">Rate (pkts/s)</label>
+                        <input id="nt-rate" class="input" name="rate" type="number"
+                               min="100" value="{{ defaults['rate'] }}">
+                    </div>
+                    <div class="field">
+                        <label for="nt-retries">Retries</label>
+                        <input id="nt-retries" class="input" name="retries" type="number"
+                               min="0" max="10" value="{{ defaults['retries'] }}">
+                    </div>
+                </div>
+                <p class="hint">masscan's own default is 0 retries — one SYN per port, never
+                   retransmitted, so a single dropped probe loses that port silently.</p>
+            </div>
+
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="nt-octet">Start IP (last octet)</label>
+                <input id="nt-octet" class="input" name="start_octet" type="number"
+                       min="1" max="254" placeholder="optional">
+            </div>
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="nt-notes">Notes</label>
+                <textarea id="nt-notes" class="input" name="notes" rows="2"
+                          placeholder="scope notes for this task"></textarea>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+            <button class="btn btn-secondary" type="submit">Save</button>
+            <button class="btn btn-primary" type="submit" name="start_now" value="1">
+                <i class="ph ph-play"></i>Save &amp; run</button>
+        </div>
+    </form>
+</div>

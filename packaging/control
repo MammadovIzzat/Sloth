@@ -1,0 +1,29 @@
+Package: sloth
+Version: @VERSION@
+Section: net
+Priority: optional
+Architecture: all
+Maintainer: @MAINTAINER@
+Depends: python3 (>= 3.9), python3-flask, nmap, adduser
+Recommends: masscan, fping
+Suggests: rustscan, hping3, chromium | firefox-esr
+Installed-Size: @SIZE@
+Homepage: https://github.com/local/sloth
+Description: Web front-end for masscan, nmap and rustscan with project storage
+ Sloth is a local web application for running port scans and keeping
+ the results. Scans live inside projects; each project holds tasks (one target
+ range each), and findings are written to SQLite as they arrive, so closing the
+ browser or restarting the service loses nothing.
+ .
+ Features:
+  * Host discovery with 15 named probe profiles (nmap -sn variants, fping,
+    masscan --ping, hping3) so dead addresses are never port-scanned.
+  * Full port scans via masscan, rustscan or nmap, chosen per run. masscan
+    cannot traverse IPsec/VPN tunnels; the tool detects this and warns.
+  * Per-host nmap service and script scans with headless-browser screenshots
+    of any web services found.
+  * Live results over server-sent events, real pause/resume (SIGSTOP/SIGCONT)
+    and stop that preserves masscan's resume point.
+  * Self-contained HTML, TXT and JSON export per task or project.
+ .
+ Access requires a login; an API token is available for scripted use.

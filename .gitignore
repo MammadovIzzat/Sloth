@@ -1,0 +1,35 @@
+# Engagement data — never commit. This repository is public, and everything
+# below is either a client's scan results or a credential.
+
+# Results database: projects, findings, and the users table holding password
+# and API-token hashes.
+scans.db
+scans.db-wal
+scans.db-shm
+*.sqlite
+*.sqlite3
+
+# Per-task working directories. Contains .secret (the session signing key) and
+# masscan paused.conf files, which record the scanning host's adapter address
+# and the target ranges.
+runs/
+
+# Screenshots of client web services.
+screenshots/
+
+# Recovered scan data and stray masscan state from earlier runs.
+legacy_scans_backup.json
+restore_legacy_scans.py
+paused.conf
+
+# Build output.
+dist/
+__pycache__/
+*.py[cod]
+
+# Local editor/tool state.
+.cls
+.claude/
+.venv/
+venv/
+*.log

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Sloth{% endblock %}
+
+{% block auth_content %}
+<div style="max-width:340px">
+    <h3 style="margin:0 0 6px">Sign in</h3>
+    <p class="sub" style="margin-bottom:26px">Sign in to continue.</p>
+
+    <form method="post" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+        <div class="field">
+            <label for="lg-u">Username</label>
+            <input id="lg-u" class="input" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="field">
+            <label for="lg-p">Password</label>
+            <input id="lg-p" class="input" name="password" type="password"
+                   autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+
+    <p class="hint" style="margin-top:26px;max-width:42ch">
+        This tool runs as root and drives raw-socket scanners. Keep it bound to
+        localhost unless you have a reason not to.
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}First-run setup · Sloth{% endblock %}
+
+{% block auth_content %}
+<div style="max-width:340px">
+    <h3 style="margin:0 0 6px">Create your account</h3>
+    <p class="sub" style="margin-bottom:26px;line-height:1.7;max-width:44ch">
+        No account exists yet. Create one now — there is deliberately no default
+        password, so nothing is left open by accident.
+    </p>
+
+    <form method="post" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field">
+            <label for="su-u">Username</label>
+            <input id="su-u" class="input" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="field">
+            <label for="su-p">Password</label>
+            <input id="su-p" class="input" name="password" type="password"
+                   autocomplete="new-password" minlength="{{ min_length }}" required>
+            <p class="hint">At least {{ min_length }} characters. Stored as a scrypt hash.</p>
+        </div>
+        <div class="field">
+            <label for="su-c">Confirm password</label>
+            <input id="su-c" class="input" name="confirm" type="password"
+                   autocomplete="new-password" minlength="{{ min_length }}" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Create account</button>
+    </form>
+</div>
+{% endblock %}

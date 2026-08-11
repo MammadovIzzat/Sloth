@@ -1,0 +1,12 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flashes">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ 'error' if category == 'error' else 'ok' }}">
+      <i class="ph {{ 'ph-warning-circle' if category == 'error' else 'ph-check-circle' }}"></i>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
