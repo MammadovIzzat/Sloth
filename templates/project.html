@@ -19,9 +19,10 @@
             {% endif %}
         </div>
         <div class="page-actions">
-            <a class="btn btn-ghost"
-               href="{{ url_for('reports.export_project', project_id=project['id'], format='html') }}">
-                <i class="ph ph-download-simple"></i>Export</a>
+            <button class="btn btn-ghost" data-dialog-open="dlg-export">
+                <i class="ph ph-download-simple"></i>Export</button>
+            <button class="btn btn-ghost" data-dialog-open="dlg-import">
+                <i class="ph ph-upload-simple"></i>Import</button>
             <button class="btn btn-ghost" data-dialog-open="dlg-settings">
                 <i class="ph ph-gear"></i>Settings</button>
             <button class="btn btn-primary" data-dialog-open="dlg-task">
@@ -120,6 +121,43 @@
 {% block dialogs %}
 {% include "_dialog_project.html" %}
 {% include "_dialog_task.html" %}
+{% set import_project = project %}
+{% include "_dialog_import.html" %}
+
+<div class="dialog-backdrop hidden" id="dlg-export">
+    <div class="dialog">
+        <div class="row-between">
+            <span class="dialog-title">Export {{ project['name'] }}</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            {% set formats = [
+                ('html', 'ph-file-html', 'Report',
+                 'Self-contained page with the screenshots embedded. For reading and for pasting into a deliverable.'),
+                ('json', 'ph-arrows-left-right', 'Transferable data',
+                 'Everything, screenshots included. This is the file another Sloth can import.'),
+                ('txt',  'ph-text-align-left', 'Plain text',
+                 'One finding per line, in the shape grep and cut expect.')] %}
+            {% for fmt, icon, label, note in formats %}
+            <a class="card elev-sm"
+               style="padding:var(--space-4);flex-direction:row;gap:var(--space-4);
+                      align-items:flex-start;color:var(--color-text);
+                      margin-bottom:var(--space-3)"
+               href="{{ url_for('reports.export_project', project_id=project['id'], format=fmt) }}">
+                <i class="ph {{ icon }}" style="font-size:19px;margin-top:2px"></i>
+                <span style="min-width:0">
+                    <span class="card-title" style="font-size:14px">{{ label }}</span>
+                    <span class="tag tag-neutral" style="margin-left:8px">.{{ fmt }}</span>
+                    <p class="sub" style="margin:4px 0 0">{{ note }}</p>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-dialog-close>Close</button>
+        </div>
+    </div>
+</div>
 
 <div class="dialog-backdrop hidden" id="dlg-settings">
     <form class="dialog" method="post"

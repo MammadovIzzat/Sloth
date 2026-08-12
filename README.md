@@ -158,8 +158,8 @@ Discovery-only runs record hosts that are up even when they have no open ports.
 3. **Run it.** Hosts and ports stream in live and are saved as they are found.
 4. **Rescan a host** with nmap (`-sC -sV` on TCP, `-sU` on UDP) restricted to the
    ports masscan already found. Web ports get a headless-browser screenshot.
-5. **Open the project any time** to browse every host, port and nmap report, or
-   export the whole thing.
+5. **Open the project any time** to browse every host, port and nmap report,
+   export the whole thing, or import someone else's export into it.
 
 The dashboard also has a **Quick scan** box for one-off work; those tasks land in
 an automatically created "Quick scans" project.
@@ -197,14 +197,29 @@ processes are suspended, not killed, so nothing is lost.
 Only one sweep runs at a time — masscan saturates the link, so a second start
 returns a clear "already running" message rather than competing for bandwidth.
 
-## Export
+## Export and import
 
-Per task or per project, in three formats:
+Export per task or per project, in three formats:
 
 - **HTML** — self-contained: ports, nmap services, raw nmap output and
   screenshots embedded as data URIs. No network needed to read it later.
-- **TXT** — `ip:port (proto/state) service`, one per line.
-- **JSON** — the full structure, for feeding something else.
+- **TXT** — `ip:port (proto/state) service`, one per line, for grep and cut.
+- **JSON** — everything, screenshots included. This is the interchange format.
+
+**Import** takes a JSON export from another install, so two people working the
+same engagement can merge what they found. Either into a new project, or into
+an existing one from that project's own Import button.
+
+An import only ever adds. Identifiers are minted on this side rather than taken
+from the file, so importing the same export twice makes two copies instead of
+overwriting anything, and nothing already in the database is touched. A task
+that was still running when it was exported arrives as `interrupted`, with a
+note saying its results may be partial — it is not passed off as complete.
+
+The file comes from another machine, so it is treated as untrusted: every field
+is range-checked before it reaches SQL, screenshots must actually be PNGs and
+are written under names chosen here, and anything malformed is skipped and
+counted rather than aborting the import.
 
 ## Interface
 

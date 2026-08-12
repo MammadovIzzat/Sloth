@@ -8,7 +8,7 @@ from datetime import timedelta
 from flask import Flask, g, jsonify, request, session
 
 from . import store
-from .config import BASE_DIR, RUNS_DIR
+from .config import BASE_DIR, MAX_UPLOAD_MB, RUNS_DIR
 from .db import init_db
 from .procs import registry
 
@@ -69,6 +69,7 @@ def create_app():
         SESSION_COOKIE_SECURE=bool(os.environ.get("SLOTH_HTTPS")),
         PERMANENT_SESSION_LIFETIME=timedelta(
             hours=int(os.environ.get("SLOTH_SESSION_HOURS", "12"))),
+        MAX_CONTENT_LENGTH=MAX_UPLOAD_MB * 1024 * 1024,
     )
 
     init_db()
@@ -163,6 +164,13 @@ def create_app():
         if request.is_json or request.path.startswith("/tasks/"):
             return jsonify({"error": message}), 403
         return message, 403
+
+    @app.errorhandler(413)
+    def _too_large(_exc):
+        # Werkzeug aborts the upload mid-stream, so this must not try to read
+        # the request body or redirect back into a form it never received.
+        return (f"That upload is larger than the {MAX_UPLOAD_MB} MB limit. "
+                f"Raise SLOTH_MAX_UPLOAD_MB if the export really is that big."), 413
 
     # Never leave a masscan running after the server goes away.
     atexit.register(registry.stop_all)

@@ -16,6 +16,8 @@
             <a class="btn btn-ghost" href="{{ url_for('projects.index') }}">
                 <i class="ph ph-archive"></i>Hide archived</a>
             {% endif %}
+            <button class="btn btn-ghost" data-dialog-open="dlg-import">
+                <i class="ph ph-upload-simple"></i>Import</button>
             <button class="btn btn-secondary" data-dialog-open="dlg-quick">
                 <i class="ph ph-lightning"></i>Quick scan</button>
             <button class="btn btn-primary" data-dialog-open="dlg-project">
@@ -73,6 +75,7 @@
 
 {% block dialogs %}
 {% include "_dialog_project.html" %}
+{% include "_dialog_import.html" %}
 
 <div class="dialog-backdrop hidden" id="dlg-quick">
     <form class="dialog" method="post" action="{{ url_for('projects.quick_scan') }}">

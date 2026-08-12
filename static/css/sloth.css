@@ -313,3 +313,30 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 }
 
 .table td, .table th { display: table-cell; }
+
+/* --- file input ---------------------------------------------------------- */
+/* Nocturne has no file field; the browser default is a grey OS button that
+   looks nothing like the rest of the form. Style the picker button to match
+   .btn-secondary and let the filename sit beside it. */
+
+input[type="file"].input {
+  padding: 5px 10px;
+  line-height: 24px;
+  cursor: pointer;
+}
+
+input[type="file"].input::file-selector-button {
+  margin-right: 10px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-neutral-800);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+input[type="file"].input::file-selector-button:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}

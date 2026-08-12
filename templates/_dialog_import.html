@@ -1,0 +1,41 @@
+{# Shared by the dashboard and the project page. Set `import_project` before
+   including to merge into that project instead of creating a new one. #}
+<div class="dialog-backdrop hidden" id="dlg-import">
+    <form class="dialog" method="post" enctype="multipart/form-data"
+          action="{{ url_for('reports.import_bundle') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        {% if import_project %}
+        <input type="hidden" name="project_id" value="{{ import_project['id'] }}">
+        {% endif %}
+        <div class="row-between">
+            <span class="dialog-title">Import results</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            <p class="hint" style="margin:0 0 var(--space-4)">
+                {% if import_project %}
+                    Adds the tasks, hosts, ports and nmap reports from someone
+                    else’s export into <b>{{ import_project['name'] }}</b>.
+                {% else %}
+                    Loads someone else’s export into a new project. Take the
+                    <b>JSON</b> export — the HTML report is for reading, not
+                    for loading back in.
+                {% endif %}
+            </p>
+            <div class="field">
+                <label for="imp-file">Export file (.json)</label>
+                <input id="imp-file" class="input" type="file" name="bundle"
+                       accept=".json,application/json" required>
+            </div>
+            <p class="hint" style="margin-top:var(--space-4)">
+                Screenshots travel inside the file, so nothing else is needed.
+                Nothing already here is overwritten — an import only ever adds.
+            </p>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+            <button class="btn btn-primary" type="submit">
+                <i class="ph ph-upload-simple"></i>Import</button>
+        </div>
+    </form>
+</div>

@@ -9,10 +9,10 @@ import base64
 import json
 import os
 
-from flask import (Blueprint, abort, jsonify, make_response, render_template,
-                   request, send_file)
+from flask import (Blueprint, abort, flash, jsonify, make_response, redirect,
+                   render_template, request, send_file, url_for)
 
-from .. import store
+from .. import store, transfer
 from ..config import SHOTS_DIR
 
 bp = Blueprint("reports", __name__)
@@ -80,6 +80,44 @@ def export_project(project_id):
                           project=project)
 
 
+@bp.route("/import", methods=["POST"])
+def import_bundle():
+    """Loads a JSON export from another install.
+
+    Always lands in a project — a new one by default, or an existing one when
+    two people are splitting the same engagement between them.
+    """
+    back = request.form.get("project_id")
+    home = (url_for("projects.project_detail", project_id=back) if back
+            else url_for("projects.index"))
+
+    upload = request.files.get("bundle")
+    if upload is None or not upload.filename:
+        flash("Choose a .json export to import.", "error")
+        return redirect(home)
+
+    try:
+        data = transfer.read_bundle(upload.read())
+        tally = transfer.import_bundle(data, project_id=back or None)
+    except transfer.BundleError as exc:
+        flash(str(exc), "error")
+        return redirect(home)
+
+    counts = " · ".join(
+        f"{tally[k]} {label}"
+        for k, label in (("tasks", "task(s)"), ("hosts", "host(s)"),
+                         ("ports", "port(s)"), ("scans", "nmap scan(s)"),
+                         ("shots", "screenshot(s)")) if tally[k])
+    where = "into a new project" if tally["created"] else "into this project"
+    flash(f"Imported {counts or 'nothing — the file had no results'} {where}.",
+          "ok")
+    if tally["skipped"]:
+        flash(f"{tally['skipped']} entr(y/ies) in the file were malformed and "
+              f"were skipped.", "error")
+    return redirect(url_for("projects.project_detail",
+                            project_id=tally["project"]))
+
+
 def _task_bundle(task):
     """Everything one task knows, ready for rendering or serialising."""
     hosts = store.task_hosts(task["id"])
@@ -99,8 +137,11 @@ def _task_bundle(task):
 
 def _render_export(fmt, title, slug, sections, project=None):
     if fmt == "json":
-        payload = {"title": title, "project": dict(project) if project else None,
-                   "tasks": sections}
+        # The JSON export is also the import format, so it carries a version
+        # header and the screenshots themselves rather than filenames that mean
+        # nothing on another machine.
+        from .. import __version__
+        payload = transfer.envelope(title, sections, project, version=__version__)
         resp = make_response(json.dumps(payload, indent=2, default=str))
         resp.headers["Content-Type"] = "application/json"
         resp.headers["Content-Disposition"] = f"attachment; filename={slug}.json"

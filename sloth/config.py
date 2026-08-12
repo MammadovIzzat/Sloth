@@ -17,6 +17,11 @@ SHOTS_DIR = os.environ.get("SLOTH_SHOTS", os.path.join(DATA_DIR, "screenshots"))
 # which is what makes --resume possible without tasks stepping on each other.
 RUNS_DIR = os.environ.get("SLOTH_RUNS", os.path.join(DATA_DIR, "runs"))
 
+# Ceiling on an imported export. Screenshots travel inside it base64-encoded,
+# so a real engagement can run to tens of megabytes; the cap is here to stop an
+# accidental upload of something enormous, not to be tight.
+MAX_UPLOAD_MB = int(os.environ.get("SLOTH_MAX_UPLOAD_MB", "192"))
+
 HOST = os.environ.get("SLOTH_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SLOTH_PORT", "9998"))
 # Off by default: this tool needs root for masscan, and the Werkzeug debugger

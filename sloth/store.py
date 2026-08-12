@@ -456,14 +456,17 @@ def _ip_sort_key(ip):
 # --- nmap scans ----------------------------------------------------------
 
 def save_nmap_scan(scan_id, ip, tool, command, raw_output, ports, shots,
-                   task_id=None, project_id=None):
+                   task_id=None, project_id=None, created_at=None):
+    # created_at is passed only by the importer, which keeps the timestamp from
+    # the install the scan actually ran on — the reports display it, and "today"
+    # would be a lie about when the host was seen.
     conn = connect()
     try:
         conn.execute(
             "INSERT INTO nmap_scans (id, ip, tool, created_at, command, raw_output,"
             " ports_json, screenshots_json, task_id, project_id)"
             " VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (scan_id, ip, tool, now(), command, raw_output,
+            (scan_id, ip, tool, created_at or now(), command, raw_output,
              json.dumps(ports), json.dumps(shots), task_id, project_id),
         )
         conn.commit()
