@@ -107,19 +107,7 @@ def _render_export(fmt, title, slug, sections, project=None):
         return resp
 
     if fmt == "txt":
-        lines = [f"# {title}", ""]
-        for sec in sections:
-            t = sec["task"]
-            lines.append(f"## Task: {t['name']}  [{t['target']}]  status={t['status']}")
-            if not sec["hosts"]:
-                lines.append("   (no hosts found)")
-            for host in sec["hosts"]:
-                for p in host["ports"]:
-                    svc = f"  {p['service']}" if p.get("service") else ""
-                    lines.append(
-                        f"{host['ip']}:{p['port']} ({p['proto']}/{p['state']}){svc}")
-            lines.append("")
-        resp = make_response("\n".join(lines))
+        resp = make_response(_render_text(title, sections, project))
         resp.headers["Content-Type"] = "text/plain; charset=utf-8"
         resp.headers["Content-Disposition"] = f"attachment; filename={slug}.txt"
         return resp
@@ -136,6 +124,73 @@ def _render_export(fmt, title, slug, sections, project=None):
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     resp.headers["Content-Disposition"] = f"attachment; filename={slug}.html"
     return resp
+
+
+def _scan_config(t):
+    """The one-line description of how a task was run, as the pages show it."""
+    bits = [t["scan_type"] or "full"]
+    for label, key in (("", "engine"), ("discovery ", "discovery"),
+                       ("TCP ", "tcp_ports"), ("UDP ", "udp_ports"),
+                       ("top ", "top_ports")):
+        if t[key]:
+            bits.append(f"{label}{t[key]}")
+    if t["rate"]:
+        bits.append(f"{t['rate']} pkts/s")
+    return " · ".join(bits)
+
+
+def _render_text(title, sections, project):
+    """Plain text, carrying what the HTML report carries.
+
+    The finding lines keep the shape 'ip:port (proto/state)  service' — this is
+    the format people pipe into grep and cut, so it stays stable even as the
+    surrounding report grows.
+    """
+    out = [f"# {title}"]
+    if project:
+        if project["client"]:
+            out.append(f"client: {project['client']}")
+        out.append(f"project created {project['created_at']}")
+        if project["description"]:
+            out.append(project["description"])
+
+    hosts = sum(len(s["hosts"]) for s in sections)
+    ports = sum(len(h["ports"]) for s in sections for h in s["hosts"])
+    out += ["", f"{len(sections)} task(s) · {hosts} host(s) · "
+                f"{ports} open/filtered port(s)"]
+
+    for sec in sections:
+        t = sec["task"]
+        out += ["", "=" * 72, f"## {t['name']}", ""]
+        meta = [("target", t["target"]), ("status", t["status"]),
+                ("scan", _scan_config(t)), ("started", t["started_at"]),
+                ("finished", t["finished_at"]), ("notes", t["notes"]),
+                ("error", t["error"])]
+        out += [f"   {k:<10} {v}" for k, v in meta if v]
+        out.append("")
+
+        if not sec["hosts"]:
+            out.append("   (no hosts with open ports were found by this task)")
+            continue
+
+        for host in sec["hosts"]:
+            if not host["ports"]:
+                out.append(f"{host['ip']}  (up — no open ports recorded)")
+            for p in host["ports"]:
+                svc = f"  {p['service']}" if p.get("service") else ""
+                out.append(
+                    f"{host['ip']}:{p['port']} ({p['proto']}/{p['state']}){svc}")
+
+            for scan in sec["scans"].get(host["ip"], []):
+                out += ["", f"   nmap · {scan['tool']} · {scan['created_at']}",
+                        f"   $ {scan['command']}"]
+                for shot in scan["screenshots"]:
+                    out.append(f"   screenshot: {shot.get('url', '')}")
+                out += ["   " + "-" * 60]
+                out += ["   " + ln for ln in
+                        (scan["raw_output"] or "").rstrip().splitlines()]
+                out += ["   " + "-" * 60, ""]
+    return "\n".join(out) + "\n"
 
 
 def _inline_png(fname):
