@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- No remote anything: the renderer loads its own files and talks to the main
+     process over IPC. connect-src 'none' means a hostile string that reaches
+     the DOM cannot phone home even if it manages to run. Note there is no
+     'unsafe-inline' for scripts or styles — the views build DOM nodes rather
+     than markup, so nothing needs it. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline';
+               font-src 'self'; img-src 'self' data:; connect-src 'none';
+               form-action 'none'; base-uri 'none'">
+<title>Sloth</title>
+<link rel="stylesheet" href="css/nocturne.css">
+<link rel="stylesheet" href="css/sloth.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

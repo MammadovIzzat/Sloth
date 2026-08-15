@@ -19,13 +19,19 @@ runs/
 # which holds the README images.
 /screenshots/
 
+# Output written by other tools run from this directory. Named after live
+# hosts, so it is engagement data whatever produced it.
+reports/
+
 # Recovered scan data and stray masscan state from earlier runs.
 legacy_scans_backup.json
 restore_legacy_scans.py
 paused.conf
 
-# Build output.
+# Build output. node_modules is rebuilt from package-lock.json; dist holds
+# a 100 MB+ Electron package.
 dist/
+node_modules/
 __pycache__/
 *.py[cod]
 
@@ -35,3 +41,8 @@ __pycache__/
 .venv/
 venv/
 *.log
+
+# makepkg working directories and built packages.
+packaging/arch/pkg/
+packaging/arch/src/
+packaging/arch/*.pkg.tar.*

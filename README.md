@@ -1,9 +1,15 @@
 # Sloth
 
-A web front-end for `masscan` and `nmap` that keeps its results. Scans live
-inside **projects**; each project holds **tasks** (one target range each), and a
-task's findings are written to SQLite as they arrive — so you can close the tab,
-restart the server, and open the project later to read the results.
+A desktop front-end for `masscan`, `nmap` and `rustscan` that keeps its
+results. Scans live inside **projects**; each project holds **tasks** (one
+target range each), and a task's findings are written to SQLite as they arrive
+— so you can close the window and open the project later to read them.
+
+**There is no listening port.** The interface is an Electron window talking to
+its own process over IPC, so nothing on the network — or elsewhere on the
+machine — can reach the tool. The previous build served HTTP on localhost; that
+version is still in this repository under `sloth/` and `scanner.py`, and is
+what the test suite diffs against.
 
 ## Screenshots
 
@@ -36,50 +42,112 @@ throwaway database of invented data.
 
 ## Install
 
-From the Debian package (Debian, Ubuntu, Kali):
+### Arch, CachyOS, Manjaro, EndeavourOS
+
+Build the package and let pacman install it:
 
 ```bash
-sudo apt install ./sloth_2.1.0_all.deb
-sudo systemctl enable --now sloth
+npm install && npm run pack && (cd packaging/arch && makepkg -si)
 ```
 
-Or run straight from a checkout:
+Or install the prebuilt one directly:
 
 ```bash
-sudo python scanner.py
+sudo pacman -U dist/sloth-3.0.0.pacman
 ```
 
-Then open <http://127.0.0.1:9998>. The first visit asks you to create an
-account — there is no default password. Root is required because masscan needs
-raw sockets; the app warns and refuses to start a sweep without it.
+Both work. The `makepkg` route is the better package — electron-builder shells
+out to `fpm`, which silently drops optional dependencies, so the prebuilt file
+cannot tell you that installing `nmap` or `masscan` is what makes the tool
+useful. The PKGBUILD lists them properly and also sets `chrome-sandbox`
+setuid, which is what lets Chromium sandbox itself without `--no-sandbox`.
+
+### Debian, Ubuntu, Kali
+
+```bash
+sudo apt install ./dist/sloth_3.0.0_amd64.deb
+```
+
+### Anything else
+
+Or the AppImage, which needs no install:
+
+```bash
+chmod +x Sloth-3.0.0.AppImage && ./Sloth-3.0.0.AppImage
+```
+
+Or run from a checkout:
+
+```bash
+npm install && npm start
+```
+
+The first launch asks you to create an account — there is no default password.
+
+**Running as root** works but must be asked for, because Chromium cannot
+sandbox itself as root:
+
+```bash
+sudo sloth --allow-root
+```
+
+That makes every scanner work with no capabilities granted to anything. Without
+the flag the app explains and exits rather than starting unsandboxed by
+accident.
+
+## Raw sockets without root
+
+`masscan`, `fping` and `hping3` build their own packets and need
+`CAP_NET_RAW`. Grant it once per binary:
+
+```bash
+sudo setcap cap_net_raw+ep $(which masscan)
+```
+
+The Account page shows which scanners have it and offers to run that for you
+through `pkexec`. `nmap` and `rustscan` need nothing for TCP work — they use
+ordinary kernel sockets.
+
+For **UDP**, use the masscan engine or the masscan UDP rescan. nmap refuses
+`-sU` unless it is genuinely uid 0 — it checks the uid rather than
+capabilities, so `setcap` does not help — and running the scanner as root would
+cost Sloth the ability to pause or stop it.
+
+Elevating the scanner instead of the app is not only about the sandbox. An
+unprivileged process cannot signal a root-owned one, so if the app ran as you
+and launched masscan through `sudo`, every Pause and Stop would fail with
+`EPERM` — and Stop is what gives masscan the chance to write `paused.conf` for
+a later `--resume`. With the capability, masscan runs as you and the signals
+land.
+
+## Moving data from the Python build
+
+The old build ran under `sudo`, so its `scans.db` is usually owned by root. On
+first launch Sloth looks for it and prints the two commands to bring it across;
+the schema is unchanged, so every project, task and finding transfers as-is.
+Nothing is copied automatically — reading a root-owned file needs a privilege
+this process deliberately does not have.
 
 ## Authentication
 
-Every page and endpoint requires a signed-in session. The first request to a
-fresh install goes to `/setup` to create the account; after that `/setup` is
-closed and only `/login` is public.
+The database holds client hosts, open ports and screenshots of their internal
+systems, so it stays locked until you sign in. The first launch creates the
+account; there is no default password.
 
-- Passwords are stored as **scrypt** hashes (via Werkzeug), minimum 10 characters.
-- Failed logins are throttled per client address — 8 misses buys a 5-minute
-  lockout — and an unknown username costs the same time as a wrong password, so
-  the response cannot be used to enumerate accounts.
-- Sessions are `HttpOnly`, `SameSite=Lax`, and expire after 12 hours
-  (`SLOTH_SESSION_HOURS`). Set `SLOTH_HTTPS=1` to add the `Secure` flag when
-  serving over TLS.
+- Passwords are **scrypt** hashes in Werkzeug's format, minimum 10 characters.
+  That format is deliberate: an account made by the Python build signs in here,
+  and one made here signs in there. The test suite checks both directions.
+- Failed attempts are throttled — 8 misses buys a 5-minute lockout — and an
+  unknown username costs the same time as a wrong password, so the response
+  cannot be used to enumerate accounts.
+- The session lives in the app process. Closing the window signs you out; there
+  is no cookie to steal and nothing on disk.
 
-### API tokens for scripts
-
-Browser sessions would make the tool unscriptable, so generate a token under
-**👤 your name → API token**:
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:9998/tasks/<id>/state
-```
-
-`X-API-Token: <token>` works too. Only the hash is stored, so a token is shown
-once and regenerating replaces it. Token-authenticated requests skip the CSRF
-check — they carry no browser origin and cannot be forged from a victim's
-browser — so automation keeps working without weakening the browser path.
+**API tokens were removed.** They existed so `curl` could reach the HTTP API.
+With no socket there is nothing for a token to authenticate to, and issuing one
+would mint a credential that cannot be used. The `api_token_hash` column stays
+so the schema still matches the Python build, and any existing token is left
+untouched rather than deleted.
 
 ## A task is a target, not a single scan
 
@@ -220,6 +288,10 @@ The file comes from another machine, so it is treated as untrusted: every field
 is range-checked before it reaches SQL, screenshots must actually be PNGs and
 are written under names chosen here, and anything malformed is skipped and
 counted rather than aborting the import.
+
+Bundles move between the two builds in both directions — a project exported
+from the Python version imports here, and one exported here imports there,
+screenshots included. Useful while a team is mid-migration.
 
 ## Interface
 

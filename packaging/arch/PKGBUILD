@@ -1,0 +1,119 @@
+# Maintainer: Sloth <root@localhost>
+#
+# Packages the electron-builder output for pacman.
+#
+# electron-builder can emit a .pacman file directly, and that one installs
+# fine, but the fpm it shells out to silently drops optional dependencies —
+# so a package built that way cannot tell you that installing nmap or masscan
+# is what makes the tool useful. This PKGBUILD exists to say so properly.
+#
+#   npm install && npm run pack     # produces dist/linux-unpacked
+#   cd packaging/arch && makepkg -si
+#
+pkgname=sloth
+pkgver=3.0.0
+pkgrel=1
+pkgdesc="Network scanning front-end with project-based result storage"
+arch=('x86_64')
+url="https://github.com/MammadovIzzat/Sloth"
+license=('MIT')
+
+# What Electron itself links. Everything else it bundles, so the long list of
+# ffmpeg/libvpx/re2/snappy that a system-electron package needs is absent here.
+depends=('gtk3' 'nss' 'alsa-lib' 'libxss' 'libxtst' 'at-spi2-core'
+         'libsecret' 'libnotify' 'xdg-utils')
+
+# The scanners are genuinely optional: nmap on its own makes Sloth useful, and
+# rustscan is AUR-only so it could never be a hard dependency.
+optdepends=('nmap: nmap engine, host discovery and per-host rescans'
+            'masscan: fastest full-port engine, needs CAP_NET_RAW'
+            'rustscan: fast engine that works through IPsec/VPN tunnels (AUR)'
+            'fping: fast parallel ICMP sweeps'
+            'hping3: crafted per-host probes'
+            'libcap: setcap, to grant CAP_NET_RAW to the scanners'
+            'polkit: lets Sloth grant that capability from its Account page')
+
+options=('!strip' '!debug')
+install="${pkgname}.install"
+
+# Built out of the repository this file lives in, not downloaded.
+_root="$(realpath "${startdir}/../..")"
+
+package() {
+    local unpacked="${_root}/dist/linux-unpacked"
+    if [[ ! -d ${unpacked} ]]; then
+        echo "==> ${unpacked} is missing. Run 'npm run pack' in ${_root} first." >&2
+        return 1
+    fi
+
+    install -dm755 "${pkgdir}/opt/${pkgname}"
+    cp -a "${unpacked}/." "${pkgdir}/opt/${pkgname}/"
+
+    # chrome-sandbox must be setuid root: it is the helper Chromium uses to
+    # enter its own sandbox as an unprivileged process. Without this the app
+    # only starts with --no-sandbox, which is exactly what this build refuses
+    # to do.
+    if [[ -f ${pkgdir}/opt/${pkgname}/chrome-sandbox ]]; then
+        chmod 4755 "${pkgdir}/opt/${pkgname}/chrome-sandbox"
+    fi
+
+    # A wrapper rather than a symlink. Chromium aborts with a raw FATAL when it
+    # is started as root without --no-sandbox, and that check runs inside the
+    # binary long before any of Sloth's own code — so the only place left to
+    # explain the situation is here, before exec.
+    install -dm755 "${pkgdir}/usr/bin"
+    install -Dm755 /dev/stdin "${pkgdir}/usr/bin/${pkgname}" <<-LAUNCH
+	#!/bin/sh
+	# Sloth launcher.
+	if [ "\$(id -u)" = 0 ]; then
+	    case " \$* " in
+	        *" --allow-root "*) ;;
+	        *)
+	            if [ "\$SLOTH_ALLOW_ROOT" != "1" ]; then
+	                cat >&2 <<-'MSG'
+			Sloth was started as root.
+
+			That works, but Chromium cannot sandbox itself as root, so the
+			interface runs unsandboxed — and it renders scan output, and can
+			load web pages, from the hosts you are testing.
+
+			If you want that, ask for it explicitly:
+
+			    sudo sloth --allow-root
+
+			Otherwise run it as your normal user. The scanners that need raw
+			sockets are elevated per scan, and Sloth will prompt when needed.
+			MSG
+	                exit 1
+	            fi
+	            ;;
+	    esac
+	fi
+	exec /opt/${pkgname}/sloth "\$@"
+	LAUNCH
+
+    # Every size, not just 512, so each one is a clean LANCZOS reduction of the
+    # artwork rather than whatever the desktop's own scaler produces from a
+    # single large file.
+    local size
+    for size in 16 24 32 48 64 128 256 512; do
+        install -Dm644 "${_root}/build/icons/${size}x${size}.png" \
+            "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${pkgname}.png"
+    done
+
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/applications/${pkgname}.desktop" <<-DESKTOP
+	[Desktop Entry]
+	Type=Application
+	Name=Sloth
+	Comment=${pkgdesc}
+	Exec=/opt/${pkgname}/sloth %U
+	Icon=${pkgname}
+	Terminal=false
+	Categories=Network;Security;
+	Keywords=scan;nmap;masscan;pentest;security;
+	StartupWMClass=Sloth
+	DESKTOP
+
+    install -Dm644 "${_root}/LICENSE" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" 2>/dev/null || true
+}

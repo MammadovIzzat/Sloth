@@ -1,0 +1,490 @@
+/* Sloth — application layout on top of Nocturne.
+   Nocturne owns the look (colour, type, buttons, cards, dialogs, tables); this
+   file only adds the page scaffolding the design uses via inline styles, so the
+   templates stay readable and one change lands everywhere. */
+
+/* --- signed-out split screen ------------------------------------------- */
+
+.auth { display: flex; min-height: 100vh; }
+.auth-form { flex: 1; padding: clamp(24px, 5vw, 56px); }
+.auth-aside {
+  flex: 1;
+  border-left: 1px solid var(--color-divider);
+  background: linear-gradient(160deg,
+              color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 60%);
+  display: flex; align-items: flex-end; padding: var(--space-8);
+}
+.auth-aside p {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; line-height: 1.8; max-width: 34ch;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+@media (max-width: 780px) { .auth-aside { display: none; } }
+
+/* --- brand -------------------------------------------------------------- */
+
+.brand { display: flex; align-items: center; gap: 10px; color: var(--color-text);
+         text-decoration: none; }
+.brand-mark {
+  width: 24px; height: 24px; border-radius: 7px;
+  border: 1px solid var(--color-accent); display: grid; place-items: center;
+  color: var(--color-accent); font-size: 14px; flex: none;
+}
+.brand-word { font-family: var(--font-heading); font-size: 19px; letter-spacing: -0.02em; }
+.brand-lg { margin-bottom: 40px; }
+.brand-lg .brand-word { font-size: 23px; }
+
+/* --- signed-in shell ---------------------------------------------------- */
+
+.shell { display: flex; align-items: flex-start; }
+
+.sidebar {
+  width: 236px; flex: none; position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; gap: var(--space-8);
+  padding: var(--space-6) var(--space-4);
+  border-right: 1px solid var(--color-divider); overflow: auto;
+}
+.main { flex: 1; min-width: 0; padding: var(--space-8) clamp(20px, 4vw, 44px) 80px; }
+
+.nav-stack { flex-direction: column; align-items: stretch; gap: 1px; padding: 0; }
+.nav-stack > a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 9px; border-radius: var(--radius-md); font-size: 13px;
+}
+.nav-stack > a > i { font-size: 16px; }
+.nav-stack > a:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+
+.side-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.side-head { display: flex; align-items: center; justify-content: space-between; padding: 0 9px; }
+.side-head h6 { margin: 0; font-size: 10px;
+                color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.side-head a { font-size: 14px; display: flex; }
+.side-project { gap: 8px !important; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A running scan pulses; everything else is a quiet dot. */
+.dot { width: 5px; height: 5px; border-radius: 50%; flex: none;
+       background: color-mix(in srgb, var(--color-text) 30%, transparent); }
+.dot-live { background: var(--color-accent); animation: sloth-pulse 1.6s ease-in-out infinite; }
+@keyframes sloth-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.side-foot {
+  margin-top: auto; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding-top: var(--space-4); border-top: 1px solid var(--color-divider);
+}
+.side-user { display: flex; align-items: center; gap: 8px; font-size: 13px;
+             color: var(--color-text); }
+.side-user > i { font-size: 15px; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
+.icon-link { background: none; border: 0; cursor: pointer; font-size: 15px; display: flex;
+             padding: 0; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
+.icon-link:hover { color: var(--color-accent); }
+
+/* --- page header -------------------------------------------------------- */
+
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--space-6); padding-bottom: var(--space-6); margin-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-divider); flex-wrap: wrap;
+}
+.page-head h3 { margin: 0 0 4px; }
+.page-head .sub { margin: 0; font-size: 13px;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.page-actions { display: flex; gap: var(--space-2); flex: none; flex-wrap: wrap; }
+.wrap { max-width: 1080px; }
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* --- flash messages ----------------------------------------------------- */
+
+.flashes { display: flex; flex-direction: column; gap: var(--space-2);
+           margin-bottom: var(--space-6); }
+.flash { display: flex; align-items: flex-start; gap: 9px; font-size: 13px;
+         padding: 11px 14px; border-radius: var(--radius-md); border: 1px solid; }
+.flash > i { font-size: 15px; flex: none; margin-top: 1px; }
+.flash-ok { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+            background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.flash-error { border-color: color-mix(in srgb, #f2555a 45%, transparent);
+               background: color-mix(in srgb, #f2555a 12%, transparent); color: #ffb4b6; }
+
+/* --- state tags --------------------------------------------------------- */
+/* Scan states keep one hue each, so a list reads without the words. */
+
+.tag-run    { border-color: color-mix(in srgb, #e0a03a 45%, transparent);
+              background: color-mix(in srgb, #e0a03a 14%, transparent); color: #f0c076; }
+.tag-pause  { border-color: color-mix(in srgb, #5b8def 45%, transparent);
+              background: color-mix(in srgb, #5b8def 14%, transparent); color: #9dbcf7; }
+.tag-ok     { border-color: color-mix(in srgb, #3fb984 45%, transparent);
+              background: color-mix(in srgb, #3fb984 14%, transparent); color: #7fd8b0; }
+.tag-bad    { border-color: color-mix(in srgb, #f2555a 45%, transparent);
+              background: color-mix(in srgb, #f2555a 14%, transparent); color: #ffb4b6; }
+.tag-busy   { border-color: color-mix(in srgb, #a67ce8 45%, transparent);
+              background: color-mix(in srgb, #a67ce8 14%, transparent); color: #cbb0f5; }
+
+/* Ports follow the design: a neutral pill, the port number in accent, the
+   service muted beside it. Red was mine and it made every result look alarming
+   — a found port is information, not a warning. */
+.port {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  gap: 5px;
+}
+.port-num { color: var(--color-accent-300); }
+.port-svc { opacity: 0.75; }
+/* Filtered is real information the design didn't model; keep it in the same
+   pill, just quieter. */
+.port-filtered { opacity: 0.62; }
+.ports { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* --- host results ------------------------------------------------------- */
+
+.host-ip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.host-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.host-card-head { display: flex; align-items: center; justify-content: space-between;
+                  gap: var(--space-3); flex-wrap: wrap; margin-bottom: 12px; }
+.host-empty { font-size: 12px; font-style: italic;
+              color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.card-scanning { box-shadow: 0 0 0 1px color-mix(in srgb, #e0a03a 55%, transparent); }
+.card-rescanning { box-shadow: 0 0 0 1px color-mix(in srgb, #a67ce8 55%, transparent); }
+.card-failed { box-shadow: 0 0 0 1px color-mix(in srgb, #f2555a 55%, transparent); }
+
+/* --- progress ----------------------------------------------------------- */
+
+.progress-meta { display: flex; justify-content: space-between; font-size: 11.5px;
+                 color: color-mix(in srgb, var(--color-text) 50%, transparent);
+                 margin-bottom: 6px; }
+.progress-track { height: 5px; border-radius: 999px; overflow: hidden;
+                  background: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.progress-bar { height: 100%; border-radius: 999px; background: var(--color-accent);
+                transition: width 0.5s ease; }
+
+/* --- scanner log -------------------------------------------------------- */
+
+.log {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  overflow-y: auto; margin: 0; max-height: 320px;
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
+}
+pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+          line-height: 1.65; white-space: pre-wrap; word-break: break-word; margin: 0;
+          color: color-mix(in srgb, var(--color-text) 72%, transparent); }
+
+/* --- misc --------------------------------------------------------------- */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+.split { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; }
+/* Lower bases than the design's 440/280: those only stay side by side above
+   ~740px of content width, and below that the log wraps under the table as a
+   full-width stub with dead space beside it. */
+.split > .split-main { flex: 3 1 360px; min-width: 0; }
+.split > .split-aside {
+  flex: 1 1 240px; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--space-4);
+  /* Follows you down a long results table instead of scrolling away. */
+  position: sticky; top: var(--space-4);
+}
+@media (max-width: 900px) { .split > .split-aside { position: static; } }
+
+/* The log is the column's reason to exist — let it fill the space rather than
+   sitting as a short card with emptiness under it. */
+.log-card { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.log-card .log { flex: 1 1 auto; min-height: 190px; max-height: min(58vh, 460px); }
+.log-head { display: flex; align-items: center; justify-content: space-between;
+            gap: var(--space-2); margin-bottom: 10px; }
+.hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.6;
+        color: color-mix(in srgb, var(--color-text) 42%, transparent); }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+         gap: var(--space-4); }
+.shots img { width: 100%; display: block; border-radius: var(--radius-md);
+             border: 1px solid var(--color-divider); }
+.hidden { display: none !important; }
+.row-between { display: flex; align-items: center; justify-content: space-between;
+               gap: var(--space-3); flex-wrap: wrap; }
+
+/* --- host results ------------------------------------------------------- */
+/* Two views over the same findings. Table is one row per port — the right shape
+   for a sweep that turned up dozens. Cards group by host, which suits a handful
+   and is where the per-host rescan controls live. */
+
+/* An author rule like `.grid-2 { display: grid }` outranks the browser's
+   `[hidden] { display: none }`, so any element given a display by a class
+   stayed visible after setting .hidden — the results panes, the scan-settings
+   rows and the empty Nmap-reports card all did. One rule for all of them. */
+[hidden] { display: none !important; }
+
+.host-row td { vertical-align: middle; }
+.cell-ip   { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cell-port { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+             color: var(--color-accent-300); }
+.cell-svc  { color: color-mix(in srgb, var(--color-text) 70%, transparent); font-size: 13px; }
+.cell-src  { font-size: 11px; color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+
+.host-card { padding: var(--space-4) var(--space-6); gap: var(--space-4); }
+.host-head { display: flex; align-items: center; justify-content: space-between;
+             gap: var(--space-4); flex-wrap: wrap; }
+.host-id   { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.host-ip   { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+.host-meta { font-size: 11px; color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+.host-actions { display: flex; gap: var(--space-2); align-items: center;
+                flex-wrap: wrap; min-width: 0; }
+/* A select sizes itself to its widest option; without these it outgrows the
+   card and paints over what is beside it. */
+.host-tool { width: auto; max-width: 100%; min-width: 0; min-height: 30px;
+             font-size: 12px; padding: 3px 8px; }
+.host-actions .btn { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+.host-empty { font-size: 12px; font-style: italic;
+              color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+
+/* State lives on the card edge, not in a glow that shouts. */
+.card-scanning   { box-shadow: inset 2px 0 0 var(--color-accent); }
+.card-rescanning { box-shadow: inset 2px 0 0 #a67ce8; }
+.card-failed     { box-shadow: inset 2px 0 0 #f2555a; }
+
+/* --- tall dialogs -------------------------------------------------------- */
+/* Nocturne's dialog is sized for a short form — it has no height cap, and the
+   backdrop is position:fixed, so a long one (the new-scan form is a dozen
+   fields) overflows off both edges and the buttons become unreachable with no
+   way to scroll to them. Cap the height, scroll the body, pin header and
+   actions. */
+
+.dialog {
+  max-height: min(88vh, 900px);
+  /* Wider than Nocturne's 440px default: the scan form has paired fields that
+     become unreadable stacked into a narrow column. */
+  width: min(520px, 100%);
+}
+
+/* The title row and the action row keep their size; only the middle scrolls. */
+.dialog > .row-between,
+.dialog-actions { flex: none; }
+
+.dialog-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;            /* without this a flex child refuses to shrink */
+  padding-right: 4px;       /* room for the scrollbar, so it misses no text */
+}
+
+/* Make it visible that there is more form below the fold. */
+.dialog-actions {
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-3);
+}
+
+/* A very short window (a laptop with devtools open) still needs a way out. */
+@media (max-height: 560px) {
+  .dialog { max-height: 94vh; }
+}
+
+/* --- host controls must not outgrow their column -------------------------- */
+/* In table view the head sits in a fixed 190px track. A <select> sizes itself
+   to its longest option, so without these it renders wider than the track and
+   paints over the ports beside it. Grid and flex children default to
+   min-width:auto, which refuses to shrink below content — hence the explicit 0. */
+
+.host-card-head { min-width: 0; }
+.host-actions { min-width: 0; max-width: 100%; }
+.host-tool { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+
+#results[data-view="table"] .host-card-head > div { min-width: 0; }
+#results[data-view="table"] .host-actions { width: 100%; }
+#results[data-view="table"] .host-tool { flex: 1 1 auto; }
+
+/* --- host controls must not outgrow their column -------------------------- */
+/* In table view the head sits in a fixed 190px track. A <select> sizes itself
+   to its widest option, so without these it renders past that track and paints
+   over the ports beside it. Grid and flex children default to min-width:auto,
+   which refuses to shrink below content — hence the explicit zeros. */
+
+.host-card-head { min-width: 0; }
+.host-actions { min-width: 0; max-width: 100%; }
+.host-tool { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+
+#results[data-view="table"] .host-card-head > div { min-width: 0; }
+#results[data-view="table"] .host-actions { width: 100%; }
+#results[data-view="table"] .host-tool { flex: 1 1 auto; }
+
+/* --- table cells --------------------------------------------------------- */
+/* Nocturne's .card-meta is display:flex. Put it on a <td> and the cell stops
+   being a table-cell, drops out of the column model, and the browser collapses
+   the remaining cells into one anonymous box — the later columns render empty.
+   Use .cell-muted on cells instead, and keep the guard below so no future
+   display-changing class can quietly break a table again. */
+
+.cell-muted {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+.table td, .table th { display: table-cell; }
+
+/* --- file input ---------------------------------------------------------- */
+/* Nocturne has no file field; the browser default is a grey OS button that
+   looks nothing like the rest of the form. Style the picker button to match
+   .btn-secondary and let the filename sit beside it. */
+
+input[type="file"].input {
+  padding: 5px 10px;
+  line-height: 24px;
+  cursor: pointer;
+}
+
+input[type="file"].input::file-selector-button {
+  margin-right: 10px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-neutral-800);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+input[type="file"].input::file-selector-button:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+/* --- renderer-only ------------------------------------------------------- */
+/* The Electron build keeps a strict CSP (style-src 'self'), so the inline
+   style="" attributes the Jinja templates used are blocked outright. Layout
+   one-offs live here as real classes instead. */
+
+.card-pad { padding: var(--space-6); }
+
+/* --- Electron renderer --------------------------------------------------- */
+/* Classes replacing the inline style="" attributes the Jinja templates used.
+   The CSP forbids inline styles, and moving them here means the layout is in
+   one place rather than scattered through the markup. */
+
+/* sign-in and first-run */
+.auth-brand { display: flex; align-items: center; gap: 9px; font-size: 19px;
+              font-weight: 600; margin-bottom: var(--space-8); }
+.auth-title { margin: 0 0 6px; }
+.auth-sub   { margin: 0 0 var(--space-6); max-width: 46ch; }
+.auth-card  { display: block; }
+.auth-actions { margin-top: var(--space-6); }
+.btn-wide   { width: 100%; justify-content: center; }
+
+/* flashes */
+.flashes { display: flex; flex-direction: column; gap: var(--space-2); }
+.flashes:not(:empty) { margin-bottom: var(--space-4); }
+.flash-close { margin-left: auto; display: flex; color: inherit; opacity: 0.7; }
+
+/* cards used as rows */
+.row-card { padding: var(--space-6); flex-direction: row; align-items: flex-start;
+            justify-content: space-between; gap: var(--space-8); color: var(--color-text); }
+.row-card.compact { padding: var(--space-4) var(--space-6); align-items: center; }
+.row-card-main { min-width: 0; }
+.row-card-title { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.row-card-counts { text-align: right; flex: none; font-size: 12px; line-height: 1.9;
+                   color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.row-card-counts b { color: var(--color-text); }
+.card-empty { padding: var(--space-8); text-align: center; }
+.card-title.small { font-size: 14px; }
+.card-pad { padding: var(--space-6); }
+.table-card { padding: var(--space-2) var(--space-4) var(--space-4); overflow-x: auto; }
+.section { margin-bottom: var(--space-8); }
+.section-head { margin: 0 0 var(--space-3); }
+.tight { margin: 5px 0 0; }
+.spaced { margin-top: 12px; }
+.spaced-sm { margin: 6px 0 0; }
+.clamp { margin: 6px 0 0; max-width: 60ch; }
+.error-text { color: #ffb4b6; }
+.mono { font-family: var(--font-mono, ui-monospace, monospace); }
+
+/* the running-scan banner on the dashboard */
+.banner-live { padding: 14px var(--space-6); margin-bottom: var(--space-6);
+               display: flex; align-items: center; gap: 10px; color: var(--color-text); }
+.banner-text { font-size: 13px; }
+
+/* task page */
+.bar { height: 4px; border-radius: 999px; background: var(--color-sunken);
+       overflow: hidden; margin-bottom: 6px; }
+.bar-fill { height: 100%; width: 0; background: var(--color-accent);
+            transition: width 0.3s ease; }
+.progress-row { margin-bottom: var(--space-6); }
+.host-card { padding: var(--space-4) var(--space-6); }
+.host-card-head { display: flex; align-items: center; justify-content: space-between;
+                  gap: var(--space-4); flex-wrap: wrap; }
+.host-ip { font-size: 14px; font-weight: 600; }
+.progress-row .card-meta { font-variant-numeric: tabular-nums; }
+
+/* saved scans */
+.scan-row { padding: var(--space-3) var(--space-6); flex-direction: row;
+            align-items: center; gap: var(--space-4); color: var(--color-text); }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+         gap: var(--space-4); }
+.shot-card { padding: var(--space-4); }
+.shot-img { max-width: 100%; display: block; border-radius: var(--radius-md);
+            border: 1px solid var(--color-divider); margin-top: 6px; }
+
+/* dialogs */
+.dialog-x { font-size: 17px; display: flex; }
+.dialog-hint { margin: 0 0 var(--space-4); }
+.export-option { padding: var(--space-4); flex-direction: row; gap: var(--space-4);
+                 align-items: flex-start; color: var(--color-text);
+                 margin-bottom: var(--space-3); }
+.export-text { min-width: 0; }
+.export-ext { margin-left: 8px; }
+
+/* table column widths, matching the Jinja templates */
+.col-host { width: 24%; }
+.col-port { width: 18%; }
+.col-src  { width: 18%; }
+
+/* the sign-in / first-run column */
+.auth-inner  { max-width: 340px; }
+.auth-fields { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* results header: title + host count on the left, view toggle and export on
+   the right, matching the row the Jinja template built with inline styles */
+.results-head  { margin-bottom: var(--space-3); }
+.results-title { display: flex; align-items: baseline; gap: 10px; }
+.results-tools { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.export-links  { display: flex; gap: 14px; font-size: 12px; align-items: center; }
+.flush         { margin: 0; }
+
+/* saved nmap reports, listed beside the scanner log */
+.nmap-card  { padding: var(--space-4); }
+.nmap-head  { margin: 0 0 10px; }
+.nmap-list  { display: flex; flex-direction: column; gap: 6px; }
+.nmap-entry { font-size: 12px; }
+.nmap-report-btn { font-size: 12px; }
+
+/* the logo, in the sidebar and on the sign-in screen */
+.brand-logo { width: 32px; height: 32px; display: block; flex: none; }
+.auth-brand { flex-direction: column; align-items: flex-start; gap: 14px; }
+.auth-logo  { width: 88px; height: 88px; display: block; }
+
+/* the saved-scans filter bar */
+.scan-filters { display: flex; gap: var(--space-3); align-items: center;
+                flex-wrap: wrap; margin-bottom: var(--space-4); }
+.scan-filters .input { flex: 1 1 260px; min-width: 0; }
+.scan-filter-project { flex: 0 1 240px; }
+
+/* the re-run settings panel on a task */
+.cfg-panel { padding: var(--space-6); margin-bottom: var(--space-6); }
+.cfg-row   { margin-top: var(--space-4); }
+
+/* --- notifications ------------------------------------------------------- */
+/* Toasts stack in the corner above everything, and survive navigation because
+   they live outside the routed view. */
+.toasts { position: fixed; right: var(--space-6); bottom: var(--space-6);
+          display: flex; flex-direction: column; gap: var(--space-2);
+          max-width: min(420px, calc(100vw - 2 * var(--space-6))); z-index: 60; }
+.toast  { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); align-items: flex-start; }
+.toast-text { min-width: 0; }
+
+.nav-badge { margin-left: auto; font-size: 11px; line-height: 1;
+             padding: 3px 7px; border-radius: 999px;
+             background: var(--color-accent); color: #0b101a; font-weight: 600; }
+
+.note-row  { padding: var(--space-4) var(--space-6); flex-direction: row;
+             align-items: flex-start; gap: var(--space-4); color: var(--color-text); }
+.note-body { min-width: 0; flex: 1 1 auto; }
+.note-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.note-dot  { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent); }
+
+/* One error at a time on the sign-in screen, in a slot that does not grow. */
+.auth-error:not(:empty) { margin-bottom: var(--space-4); }

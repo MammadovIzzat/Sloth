@@ -1,0 +1,32 @@
+# Shown by pacman on install and upgrade.
+#
+# The capability hint is the important part: without it masscan and fping fail
+# with a permission error that reads like a bug in Sloth rather than a missing
+# privilege, and the obvious fix — running the whole app with sudo — is the one
+# thing that must not be done.
+
+post_install() {
+    cat <<'MESSAGE'
+
+  Sloth is installed. Launch it from your menu, or run: sloth
+
+  Run it as your normal user. It refuses to start as root: Chromium cannot
+  sandbox itself as root, and this interface renders scan output taken from
+  the hosts you are testing.
+
+  masscan, fping and hping3 need raw sockets. Grant the capability once:
+
+      sudo setcap cap_net_raw+ep $(which masscan)
+
+  Sloth's Account page shows which scanners have it and can run that for you
+  through polkit. nmap and rustscan need nothing.
+
+  Coming from the Python build? Its scans.db is usually owned by root. Sloth
+  finds it on first launch and prints the two commands to bring it across.
+
+MESSAGE
+}
+
+post_upgrade() {
+    post_install
+}

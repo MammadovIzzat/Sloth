@@ -15,6 +15,7 @@ like real targets rather than documentation examples, and the archive is not
 written if anything trips.
 """
 import argparse
+import pathlib
 import fnmatch
 import os
 import re
@@ -41,6 +42,24 @@ ALLOW = [
     ("packaging", "*"),
     (".", "extract-design.py"),
     (".", "make-screenshots.py"),
+    # The Electron build. node_modules and dist are never included — they are
+    # rebuilt from package-lock.json with `npm install`.
+    (".", "package.json"),
+    (".", "package-lock.json"),
+    ("src", "**/*.js"),
+    ("src", "**/*.html"),
+    ("src", "**/*.css"),
+    ("src", "**/*.woff2"),
+    ("src", "**/*.woff"),
+    ("src", "**/*.ttf"),
+    ("src", "**/*.svg"),
+    # The logo shown inside the interface.
+    ("src", "**/img/*.png"),
+    ("test", "**/*.js"),
+    ("build", "icon.png"),
+    # The per-size icon set. The small sizes are drawn with extra contrast, so
+    # they are source, not something a build step can regenerate.
+    ("build/icons", "*.png"),
 ]
 LEGACY = (".", "scanner_v1_backup.py")
 
@@ -51,12 +70,21 @@ FORBIDDEN_NAMES = {
 }
 FORBIDDEN_SUFFIXES = (
     ".db", ".db-wal", ".db-shm", ".sqlite", ".sqlite3",
+    # .png is forbidden because screenshots of client systems are PNGs. The
+    # application icon is the one deliberate exception, listed by exact path.
     ".png", ".jpg", ".jpeg", ".gif", ".pcap",
     ".pem", ".key", ".p12", ".pfx",
     ".pyc", ".pyo", ".deb", ".list", ".xml", ".log",
 )
 
 # Content that would mean a credential slipped in.
+# Binaries allowed through by exact path. .png is otherwise forbidden because
+# every other one in this tree is a screenshot of a client's system.
+ALLOWED_BINARIES = {"build/icon.png",
+                    "src/renderer/img/logo.png",
+                    "src/renderer/img/logo-small.png"} | {
+    f"build/icons/{n}x{n}.png" for n in (16, 24, 32, 48, 64, 128, 256, 512, 1024)}
+
 SECRET_PATTERNS = [
     (re.compile(r"scrypt:\d+:\d+:\d+\$"), "a password hash"),
     (re.compile(r"pbkdf2:sha\d+"), "a password hash"),
@@ -114,6 +142,8 @@ def check(paths):
         if name in FORBIDDEN_NAMES:
             errors.append(f"{rel}: excluded by name")
             continue
+        if rel in ALLOWED_BINARIES:
+            continue
         if name.endswith(FORBIDDEN_SUFFIXES):
             errors.append(f"{rel}: excluded file type")
             continue
@@ -148,9 +178,11 @@ def main():
                     help="omit scanner_v1_backup.py")
     args = ap.parse_args()
 
-    sys.path.insert(0, HERE)
+    # package.json is the version of record now; the Python package is kept
+    # alongside for the differential tests, not shipped as the product.
     try:
-        from sloth import __version__ as version
+        import json
+        version = json.loads((pathlib.Path(HERE) / "package.json").read_text())["version"]
     except Exception:
         version = "dev"
 

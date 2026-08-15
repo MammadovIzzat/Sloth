@@ -1,0 +1,118 @@
+{
+  "name": "sloth",
+  "version": "3.0.0",
+  "description": "masscan/nmap/rustscan front-end with project-based result storage",
+  "license": "MIT",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "SLOTH_DEV=1 electron .",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "test": "node --test \"test/**/*.test.js\"",
+    "dist": "electron-builder --linux pacman deb AppImage",
+    "pack": "electron-builder --linux dir"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "fast-xml-parser": "^5.10.1"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "author": {
+    "name": "Sloth",
+    "email": "root@localhost"
+  },
+  "build": {
+    "appId": "dev.sloth.app",
+    "productName": "Sloth",
+    "copyright": "MIT",
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "linux": {
+      "target": [
+        "pacman",
+        "deb",
+        "AppImage"
+      ],
+      "category": "Network;Security",
+      "description": "Front-end for masscan, nmap, rustscan, fping and hping3 with project-based result storage. Runs entirely on this machine: no listening port and no browser. Scanners that need raw sockets are granted CAP_NET_RAW individually rather than running the interface as root.",
+      "desktop": {
+        "entry": {
+          "Name": "Sloth",
+          "Comment": "Network scanning with project-based result storage",
+          "Categories": "Network;Security;",
+          "Keywords": "scan;nmap;masscan;pentest;security;",
+          "StartupWMClass": "Sloth"
+        }
+      },
+      "icon": "build/icons"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libsecret-1-0"
+      ],
+      "recommends": [
+        "nmap",
+        "masscan",
+        "rustscan",
+        "fping",
+        "libcap2-bin"
+      ],
+      "maintainer": "Sloth <root@localhost>",
+      "synopsis": "Network scanning front-end with project-based result storage"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "pacman": {
+      "depends": [
+        "gtk3",
+        "nss",
+        "alsa-lib",
+        "libxss",
+        "libxtst",
+        "at-spi2-core",
+        "libsecret",
+        "libnotify",
+        "xdg-utils"
+      ],
+      "description": "Front-end for masscan, nmap, rustscan, fping and hping3 with project-based result storage. Runs entirely on this machine: no listening port and no browser.",
+      "fpm": [
+        "--pacman-optional-depends",
+        "nmap: nmap scan engine, host discovery and per-host rescans",
+        "--pacman-optional-depends",
+        "masscan: fastest full-port engine",
+        "--pacman-optional-depends",
+        "rustscan: fast engine that works through tunnels (AUR)",
+        "--pacman-optional-depends",
+        "fping: fast ICMP sweeps",
+        "--pacman-optional-depends",
+        "hping3: crafted per-host probes",
+        "--pacman-optional-depends",
+        "libcap: setcap, to grant CAP_NET_RAW to the scanners",
+        "--pacman-optional-depends",
+        "polkit: lets Sloth grant that capability for you"
+      ],
+      "synopsis": "Network scanning front-end with project-based result storage"
+    }
+  },
+  "homepage": "https://github.com/MammadovIzzat/Sloth"
+}
