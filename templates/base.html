@@ -8,6 +8,7 @@
        client network with no route out. #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nocturne.css', v=asset_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sloth.css', v=asset_version) }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
 </head>
 <body>
 
@@ -16,7 +17,8 @@
     <div class="auth">
         <div class="auth-form">
             <a href="{{ url_for('projects.index') }}" class="brand brand-lg">
-                <span class="brand-mark"><i class="ph ph-scan"></i></span>
+                <img class="brand-logo brand-logo-lg"
+                     src="{{ url_for('static', filename='img/logo.png') }}" alt="">
                 <span class="brand-word">sloth</span>
             </a>
             {% include "_flash.html" %}
@@ -32,7 +34,8 @@
 
     <aside class="sidebar">
         <a href="{{ url_for('projects.index') }}" class="brand">
-            <span class="brand-mark"><i class="ph ph-scan"></i></span>
+            <img class="brand-logo"
+                 src="{{ url_for('static', filename='img/logo-small.png') }}" alt="">
             <span class="brand-word">sloth</span>
         </a>
 

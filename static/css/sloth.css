@@ -353,3 +353,9 @@ input[type="file"].input::file-selector-button:hover {
              padding: 3px 7px; border-radius: 999px;
              background: var(--color-accent); color: #0b101a; font-weight: 600; }
 .nav-badge.hidden { display: none; }
+
+/* --- logo --------------------------------------------------------------- */
+/* The artwork replaces the old glyph-in-a-box mark. Cut-out PNG, so no border
+   or radius to soften a square. */
+.brand-logo { width: 30px; height: 30px; display: block; flex: none; }
+.brand-logo-lg { width: 72px; height: 72px; }
