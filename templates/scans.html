@@ -7,17 +7,41 @@
         <div>
             <h3>Saved nmap scans</h3>
             <p class="sub">
-                {{ scans|length }}{% if truncated %} of {{ total }}{% endif %} report(s),
-                newest first.
+                {% if search or project_id %}
+                    {{ total }} of {{ grand_total }} report(s) match.
+                {% else %}
+                    {{ scans|length }}{% if truncated %} of {{ total }}{% endif %} report(s),
+                    newest first.
+                {% endif %}
             </p>
         </div>
         {% if truncated %}
         <div class="page-actions">
-            <a class="btn btn-ghost" href="{{ url_for('reports.list_scans', all=1) }}">
+            <a class="btn btn-ghost"
+               href="{{ url_for('reports.list_scans', all=1, q=search, project=project_id) }}">
                 Show all {{ total }}</a>
         </div>
         {% endif %}
     </div>
+
+    <form method="get" action="{{ url_for('reports.list_scans') }}"
+          style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;
+                 margin-bottom:var(--space-4)">
+        <input class="input" type="search" name="q" value="{{ search }}"
+               placeholder="Search by address, tool, task or project…"
+               autocomplete="off" style="flex:1 1 260px;min-width:0">
+        <select class="input" name="project" onchange="this.form.submit()"
+                style="flex:0 1 240px">
+            <option value="">All projects</option>
+            {% for p in projects %}
+            <option value="{{ p['id'] }}" {{ 'selected' if p['id'] == project_id }}>{{ p['name'] }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-secondary" type="submit">Search</button>
+        {% if search or project_id %}
+        <a class="btn btn-ghost" href="{{ url_for('reports.list_scans') }}">Clear</a>
+        {% endif %}
+    </form>
 
     {% if scans %}
     <div class="card elev-sm" style="padding:var(--space-2) var(--space-4) var(--space-4);
@@ -43,7 +67,13 @@
     </div>
     {% else %}
     <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
-        <p class="sub">No saved nmap scans yet. Rescan a host from a task to create one.</p>
+        <p class="sub">
+            {% if grand_total %}
+                Nothing matches that. Try a different address, tool or project.
+            {% else %}
+                No saved nmap scans yet. Rescan a host from a task to create one.
+            {% endif %}
+        </p>
     </div>
     {% endif %}
 </div>

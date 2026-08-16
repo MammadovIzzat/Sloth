@@ -231,15 +231,16 @@
 
         const select = document.createElement("select");
         select.className = "input host-tool";
-        // Short labels: in table view this sits in a 190px column, and a long
-        // option sizes the control past it. Detail moves to the tooltips.
-        select.title = "Rescan this host — nmap -sC -sV on TCP and -sU on UDP over "
-                     + "the ports already found, or a fresh full masscan sweep.";
-        [["nmap_deep", "Nmap deep", "-sC -sV on TCP, -sU on UDP, over found ports"],
-         ["masscan_tcp", "Masscan TCP", "full 1-65535 TCP sweep of this host"],
-         ["masscan_udp", "Masscan UDP", "full 1-65535 UDP sweep of this host"]].forEach(function (opt) {
+        select.title = "Rescan this host with the selected tool.";
+        // Built from the list the server sends, so the menu and the code that
+        // runs it stay in step. A tool that is not installed stays listed but
+        // unpickable, rather than failing only after the click.
+        (window.TASK.rescanTools || []).forEach(function (t) {
             const o = document.createElement("option");
-            o.value = opt[0]; o.innerText = opt[1]; o.title = opt[2];
+            o.value = t.key;
+            o.innerText = t.available ? t.label : t.label + " — " + t.tool + " not installed";
+            o.title = t.available ? t.note : t.tool + " is not installed";
+            if (!t.available) { o.disabled = true; }
             select.appendChild(o);
         });
 
@@ -482,6 +483,7 @@
         tcp_ports: document.getElementById("cfgTcp"),
         udp_ports: document.getElementById("cfgUdp"),
         top_ports: document.getElementById("cfgTop"),
+        quick_proto: document.getElementById("cfgQuickProto"),
         nmap_ports: document.getElementById("cfgNmapPorts"),
         rate: document.getElementById("cfgRate"),
         retries: document.getElementById("cfgRetries")
@@ -491,8 +493,11 @@
     function syncSettings() {
         if (!cfg.scan_type) { return; }
         const type = cfg.scan_type.value;
-        document.querySelectorAll("#runSettings [data-cfg]").forEach(function (el) {
-            const wanted = el.dataset.cfg === type;
+        // The template marks conditional blocks with data-when (the scan type
+        // they belong to). A stale data-cfg here matched nothing, which is why
+        // every field showed at once regardless of scan type.
+        document.querySelectorAll("#runSettings [data-when]").forEach(function (el) {
+            const wanted = el.dataset.when === type;
             const engineOk = !el.dataset.engine || el.dataset.engine === cfg.engine.value;
             el.classList.toggle("hidden", !(wanted && engineOk));
         });
@@ -521,6 +526,7 @@
         } else if (type === "quick") {
             out.top_ports = cfg.top_ports.value;
             out.nmap_ports = cfg.nmap_ports.value;
+            if (cfg.quick_proto) { out.quick_proto = cfg.quick_proto.value; }
         }
         return out;
     }

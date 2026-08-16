@@ -38,6 +38,15 @@ ENGINES = {
     },
 }
 
+# What a quick nmap scan may cover. UDP is offered here because this build runs
+# as root, where nmap's -sU works — "top 1000 TCP" is only half the picture on
+# a host that answers on 53, 123 or 161.
+QUICK_PROTOCOLS = {
+    "tcp": "TCP only",
+    "udp": "UDP only",
+    "both": "TCP and UDP",
+}
+
 
 def parse_scan_config(form, target, defaults=None):
     """Validates scan settings from a form into columns ready for the tasks table.
@@ -105,6 +114,11 @@ def parse_scan_config(form, target, defaults=None):
             top = _clamp_int(pick_value("top_ports", DEFAULT_TOP_PORTS),
                              DEFAULT_TOP_PORTS, 1, 65535)
 
+    quick_proto = str(pick_value("quick_proto",
+                                 defaults.get("quick_proto") or "tcp")).strip()
+    if quick_proto not in QUICK_PROTOCOLS:
+        quick_proto = "tcp"
+
     return {
         "scan_type": scan_type,
         "engine": engine,
@@ -112,6 +126,7 @@ def parse_scan_config(form, target, defaults=None):
         "tcp_ports": tcp,
         "udp_ports": udp,
         "top_ports": top,
+        "quick_proto": quick_proto,
         "rate": _clamp_int(pick_value("rate", defaults.get("rate") or DEFAULT_RATE),
                            DEFAULT_RATE, 100, 10_000_000),
         "retries": _clamp_int(

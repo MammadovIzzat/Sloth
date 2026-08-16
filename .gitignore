@@ -35,3 +35,10 @@ __pycache__/
 .venv/
 venv/
 *.log
+
+# Output written by other tools run from this directory. Named after live
+# hosts, so it is engagement data whatever produced it.
+reports/
+# Electron-branch build artifacts, not part of the web build.
+node_modules/
+packaging/arch/

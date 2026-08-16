@@ -44,7 +44,17 @@ class DiscoveryProfile:
                 "per_host": self.per_host, "max_hosts": self.max_hosts}
 
 
+# The key of the reuse option. Not a probe: it sends nothing and simply takes
+# the hosts this task already found, so re-running a task with different port
+# settings does not repeat a sweep that already answered the question.
+PREVIOUS = "previous"
+
 PROFILES = [
+    DiscoveryProfile(
+        PREVIOUS, "Reuse hosts found earlier in this task", None,
+        "Sends no packets at all. Takes the addresses this task already proved "
+        "alive, so a re-run with different ports skips the sweep. Fails if the "
+        "task has never found a host."),
     DiscoveryProfile(
         "nmap_default", "Nmap default probes (-sn)", "nmap",
         "ICMP echo + timestamp, TCP SYN 443, TCP ACK 80, and ARP on the local "

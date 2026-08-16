@@ -9,7 +9,7 @@ from ..config import (DEFAULT_DISCOVERY, DEFAULT_ENGINE, DEFAULT_RATE,
 from ..discovery import profiles_for_ui
 from ..engine import ScanError, manager
 from ..netutil import apply_start_ip, count_targets, normalize_target
-from ..scanconfig import ENGINES, SCAN_TYPES, parse_scan_config
+from ..scanconfig import ENGINES, QUICK_PROTOCOLS, SCAN_TYPES, parse_scan_config
 
 bp = Blueprint("projects", __name__)
 
@@ -61,6 +61,7 @@ def project_detail(project_id):
         active_task=manager.active_task,
         scan_types=SCAN_TYPES,
         engines=ENGINES,
+        quick_protocols=QUICK_PROTOCOLS,
         discovery_profiles=profiles_for_ui(),
         defaults={"tcp": DEFAULT_TCP_PORTS, "udp": DEFAULT_UDP_PORTS,
                   "rate": DEFAULT_RATE, "top_ports": DEFAULT_TOP_PORTS,

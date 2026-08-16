@@ -8,10 +8,11 @@ from flask import (Blueprint, Response, abort, jsonify, render_template,
 
 from .. import store
 from ..discovery import get_profile, profiles_for_ui
-from ..engine import (ScanBusy, ScanError, manager, paused_conf_path, read_log)
+from ..engine import (ScanBusy, ScanError, manager, paused_conf_path, read_log,
+                      rescan_tools_for_ui)
 from ..netutil import count_targets, is_valid_ip
 from ..procs import registry
-from ..scanconfig import ENGINES, SCAN_TYPES, parse_scan_config
+from ..scanconfig import ENGINES, QUICK_PROTOCOLS, SCAN_TYPES, parse_scan_config
 
 bp = Blueprint("scan", __name__)
 
@@ -34,10 +35,12 @@ def task_detail(task_id):
         can_resume=os.path.exists(paused_conf_path(task_id)),
         scan_log=read_log(task_id),
         rescanning=manager.active_rescans(task_id),
+        rescan_tools=rescan_tools_for_ui(),
         discovery_label=(profile.label if (profile := get_profile(task["discovery"]))
                          else None),
         scan_types=SCAN_TYPES,
         engines=ENGINES,
+        quick_protocols=QUICK_PROTOCOLS,
         discovery_profiles=profiles_for_ui(),
         autostart=bool(request.args.get("autostart")),
     )

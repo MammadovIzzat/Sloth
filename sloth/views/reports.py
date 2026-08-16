@@ -32,13 +32,25 @@ SCANS_PAGE_SIZE = 200
 
 @bp.route("/scans")
 def list_scans():
-    # Capped so a long-running install doesn't render thousands of rows at once.
-    all_scans = store.list_nmap_scans()
+    # Search runs in SQL so it reaches every saved scan, not just the page shown.
+    search = (request.args.get("q") or "").strip()
+    project_id = (request.args.get("project") or "").strip() or None
+    matched = store.list_nmap_scans(project_id=project_id, search=search or None)
+
     limit = SCANS_PAGE_SIZE
     if request.args.get("all"):
-        limit = len(all_scans)
-    return render_template("scans.html", nav_section="scans", scans=all_scans[:limit],
-                           total=len(all_scans), truncated=len(all_scans) > limit)
+        limit = len(matched)
+
+    # Only projects that actually have a report — offering empty ones is just a
+    # list of dead ends.
+    projects = [p for p in store.list_projects()
+                if store.list_nmap_scans(project_id=p["id"])]
+
+    return render_template(
+        "scans.html", nav_section="scans", scans=matched[:limit],
+        total=len(matched), truncated=len(matched) > limit,
+        grand_total=len(store.list_nmap_scans()),
+        search=search, project_id=project_id or "", projects=projects)
 
 
 @bp.route("/nmap-result/<scan_id>")

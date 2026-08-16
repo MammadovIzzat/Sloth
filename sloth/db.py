@@ -110,6 +110,22 @@ CREATE TABLE IF NOT EXISTS users (
     is_active      INTEGER NOT NULL DEFAULT 1
 );
 
+-- Scan activity worth telling someone about. In the database rather than in
+-- memory so closing a toast does not lose it and a restart does not either:
+-- coming back to read what a long sweep did overnight is the point.
+CREATE TABLE IF NOT EXISTS notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    level      TEXT NOT NULL DEFAULT 'info',   -- info | good | warn | bad
+    title      TEXT NOT NULL,
+    message    TEXT,
+    task_id    TEXT,
+    project_id TEXT,
+    seen       INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_time ON notifications(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS nmap_scans (
     id               TEXT PRIMARY KEY,
     ip               TEXT NOT NULL,
@@ -140,6 +156,9 @@ ADDED_COLUMNS = {
         # Which port scanner runs a 'full' scan: masscan, nmap or rustscan.
         # masscan cannot traverse IPsec/VPN tunnels, so the choice matters.
         "engine": "TEXT NOT NULL DEFAULT 'masscan'",
+        # Which protocols a 'quick' nmap scan covers: tcp, udp or both. UDP
+        # needs root, which this build has anyway.
+        "quick_proto": "TEXT NOT NULL DEFAULT 'tcp'",
     },
 }
 

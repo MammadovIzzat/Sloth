@@ -12,7 +12,7 @@ from .config import BASE_DIR, MAX_UPLOAD_MB, RUNS_DIR
 from .db import init_db
 from .procs import registry
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 
 def _secret_key():
@@ -76,15 +76,22 @@ def create_app():
     # Anything marked running in the DB died with the previous process.
     store.reset_stale_tasks()
 
+    from . import notify
+    from .engine import manager
     from .auth import bp as auth_bp, current_user, load_user, require_login
     from .views.projects import bp as projects_bp
     from .views.scan import bp as scan_bp
     from .views.reports import bp as reports_bp
+    from .views.notifications import bp as notifications_bp
+
+    # Turn scan events into notifications. Registered once, at startup.
+    notify.attach(manager)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(scan_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(notifications_bp)
 
     # Identify the caller first, then refuse anything unauthenticated. Both run
     # before the CSRF check so an anonymous request never reaches it.
@@ -115,7 +122,8 @@ def create_app():
         """
         if current_user() is None:
             return {}
-        return {"sidebar_projects": store.list_projects(status="active")}
+        return {"sidebar_projects": store.list_projects(status="active"),
+                "unseen_notifications": notify.unseen_count()}
 
     # --- CSRF ------------------------------------------------------------
     # Without this, any page you happen to visit could POST to this port and

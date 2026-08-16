@@ -169,7 +169,9 @@ def _check_requirements(task):
         profile = discovery.get_profile(task["discovery"])
         if profile is None:
             raise ScanError(f"Unknown discovery method: {task['discovery']!r}")
-        needed.add(profile.tool)
+        # The reuse option runs nothing, so it needs nothing installed.
+        if profile.tool:
+            needed.add(profile.tool)
         # Checked before the privilege check: "this range is too big for hping3"
         # is more useful than "hping3 needs root" when both are true.
         too_big = discovery.check_host_cap(profile, task["target"],
@@ -254,6 +256,7 @@ class ScanManager:
         self._lock = threading.RLock()
         self._active_task = None
         self._subs = {}            # task_id -> list[queue.Queue]
+        self._taps = []            # callbacks that see every published event
         self._net = {"error": False, "disconnected_at": None, "reconnected_at": None}
         self._auto_paused = False
         self._stopping = set()     # tasks the user stopped, so we don't call it an error
@@ -279,14 +282,31 @@ class ScanManager:
             if subs is not None and not subs:
                 self._subs.pop(task_id, None)
 
+    def add_event_tap(self, callback):
+        """Registers a callback that sees every published event, task-agnostic.
+
+        Notifications are derived from the same events the page streams, in one
+        place, rather than raised by hand at each call site — so a new event
+        cannot quietly go unreported and the engine keeps knowing nothing about
+        the notification layer.
+        """
+        with self._lock:
+            self._taps.append(callback)
+
     def publish(self, task_id, event):
         with self._lock:
             subs = list(self._subs.get(task_id, []))
+            taps = list(self._taps)
         for q in subs:
             try:
                 q.put_nowait(event)
             except queue.Full:
                 pass   # a browser tab that stopped reading must not stall the scan
+        for tap in taps:
+            try:
+                tap(task_id, event)
+            except Exception:      # noqa: BLE001 - a tap must never break a scan
+                pass
 
     def log(self, task_id, line):
         """Publishes a scanner output line and appends it to the task's log file.
@@ -409,21 +429,22 @@ class ScanManager:
             with self._lock:
                 return (task_id, ip) in self._rescan_cancels
 
+        # What this host already had, so "new port" means it rather than a guess
+        # at how many the rescan happened to report.
+        before = {f"{p['port']}/{p['proto']}"
+                  for h in store.task_hosts(task_id) if h["ip"] == ip
+                  for p in h["ports"]}
+
         def worker():
             self.publish(task_id, {"type": "rescan", "state": "running",
                                    "ip": ip, "tool": tool})
             try:
-                if tool.startswith("nmap"):
-                    result = nmap_rescan(ip, tool, task_id=task_id,
-                                         project_id=project_id, cancelled=cancelled)
-                elif tool == "masscan_tcp":
-                    result = masscan_rescan(ip, "tcp", task_id=task_id,
-                                            cancelled=cancelled)
-                elif tool == "masscan_udp":
-                    result = masscan_rescan(ip, "udp", task_id=task_id,
-                                            cancelled=cancelled)
-                else:
+                entry = rescan_tool(tool)
+                if entry is None:
                     raise ScanError(f"Unknown tool: {tool}")
+                result = entry["run"](ip, {"task_id": task_id,
+                                           "project_id": project_id,
+                                           "cancelled": cancelled})
             except ScanCancelled as exc:
                 self.log(task_id, f"[i] {exc}")
                 self.publish(task_id, {"type": "rescan", "state": "cancelled",
@@ -449,16 +470,20 @@ class ScanManager:
             # over the ports masscan found.
             merged = next((h["ports"] for h in store.task_hosts(task_id)
                            if h["ip"] == ip), result.get("ports", []))
+            fresh = [p for p in merged
+                     if f"{p['port']}/{p['proto']}" not in before]
             note = result.get("note")
             verb = "stopped" if result.get("stopped") else "finished"
             self.log(task_id, f"Rescan of {ip} ({tool}) {verb}: "
                               f"{len(merged)} port(s)"
+                              + (f", {len(fresh)} new" if fresh else "")
                               + (f", {result['screenshots']} screenshot(s)"
                                  if result.get("screenshots") else "")
                               + (f" — {note}" if note else ""))
             self.publish(task_id, {
                 "type": "rescan", "state": "done", "ip": ip, "tool": tool,
-                "ports": merged, "scan_id": result.get("scan_id"),
+                "ports": merged, "new_ports": len(fresh),
+                "scan_id": result.get("scan_id"),
                 "screenshots": result.get("screenshots", 0), "note": note,
                 "stopped": bool(result.get("stopped")),
             })
@@ -557,8 +582,13 @@ class ScanManager:
         profile = discovery.get_profile(task["discovery"])
         if profile is None:
             raise ScanError(f"Unknown discovery method: {task['discovery']!r}")
-        require_tool(profile.tool)
 
+        # Reuse: no probe, no clearing. Everything this task has ever seen alive
+        # — discovery hits and hosts that turned up ports — becomes the target.
+        if task["discovery"] == discovery.PREVIOUS:
+            return self._reuse_previous_hosts(task_id, task)
+
+        require_tool(profile.tool)
         store.clear_hosts(task_id)     # a re-run re-discovers from scratch
         self.publish(task_id, {"type": "phase", "phase": "discovery",
                                "tool": profile.tool, "label": profile.label})
@@ -575,6 +605,31 @@ class ScanManager:
         live = store.live_hosts(task_id)
         self.log(task_id, f"[discovery] {len(live)} host(s) up out of "
                           f"{count_targets(task['target']) or '?'} address(es).")
+        self.publish(task_id, {"type": "discovery_done", "count": len(live)})
+        return live
+
+    def _reuse_previous_hosts(self, task_id, task):
+        """Uses the hosts this task already knows instead of probing again."""
+        self.publish(task_id, {"type": "phase", "phase": "discovery",
+                               "tool": "none", "label": "Reusing hosts found earlier"})
+
+        # task_hosts is the union of discovery hits and anything with a finding,
+        # so a task that only ever ran a port sweep still has a usable list.
+        known = [h["ip"] for h in store.task_hosts(task_id)]
+        if not known:
+            raise ScanError(
+                "No hosts from an earlier run of this task, so there is nothing "
+                "to reuse. Run a discovery sweep once — fping or nmap — and later "
+                "runs can reuse what it finds.")
+
+        # Put them back in the hosts table so the rest of the run, and the host
+        # list on the page, work exactly as they would after a real sweep.
+        store.add_hosts(task_id, [{"ip": ip, "state": "up",
+                                   "reason": "found by an earlier run"}
+                                  for ip in known], method=discovery.PREVIOUS)
+        live = store.live_hosts(task_id)
+        self.log(task_id, f"[discovery] reusing {len(live)} host(s) found "
+                          f"earlier — no probe sent.")
         self.publish(task_id, {"type": "discovery_done", "count": len(live)})
         return live
 
@@ -680,9 +735,18 @@ class ScanManager:
             port_args = ["-p", task["tcp_ports"]]
         else:
             port_args = ["--top-ports", str(int(task["top_ports"] or DEFAULT_TOP_PORTS))]
-        cmd = ["nmap", "-sV", "-T4", "-Pn", "-n", *port_args,
+
+        # Which protocols to sweep. -sU needs root, which this build has; the
+        # scanners inherit it. -sT and -sU together is one nmap run covering
+        # both, and --top-ports then means the top N of each protocol.
+        proto = task["quick_proto"] or "tcp"
+        proto_args = {"udp": ["-sU"], "both": ["-sT", "-sU"]}.get(proto, ["-sT"])
+        cmd = ["nmap", *proto_args, "-sV", "-T4", "-Pn", "-n", *port_args,
                "--stats-every", "5s", "-oX", "quick.xml", *target_args]
 
+        if proto != "tcp":
+            self.log(task_id, f"[i] Quick scan covering "
+                              f"{'TCP and UDP' if proto == 'both' else 'UDP'}.")
         self.log(task_id, "$ " + " ".join(cmd))
         self.publish(task_id, {"type": "phase", "phase": "portscan", "tool": "nmap"})
 
@@ -1108,13 +1172,17 @@ def rescan_key(task_id, ip):
     return f"rescan:{task_id or 'adhoc'}:{ip}"
 
 
-def _run_nmap(task_id, ip, ports, udp=False):
-    """Runs nmap against exactly the ports masscan already found on this host."""
-    port_spec = ",".join(str(p) for p in ports)
+def _run_nmap(task_id, ip, ports, udp=False, port_selector=None):
+    """Runs nmap against a host.
+
+    `ports` is normally the list already found. A full-port rescan passes
+    `port_selector=['-p', '-']` and leaves `ports` empty.
+    """
+    selector = port_selector or ["-p", ",".join(str(p) for p in ports)]
     if udp:
-        base = ["nmap", "-sU", "-sV", "-Pn", "-T4", "-p", port_spec, ip]
+        base = ["nmap", "-sU", "-sV", "-Pn", "-T4", *selector, ip]
     else:
-        base = ["nmap", "-sC", "-sV", "-Pn", "-T4", "-p", port_spec, ip]
+        base = ["nmap", "-sC", "-sV", "-Pn", "-T4", *selector, ip]
 
     run_dir = _run_dir(task_id or "adhoc")
     xml_name = f"nmap-{uuid.uuid4().hex[:8]}.xml"
@@ -1238,3 +1306,123 @@ def masscan_rescan(ip, proto, task_id=None, rate=5000, cancelled=None):
     if task_id:
         store.add_findings(task_id, ip, ports, source="masscan")
     return {"ip": ip, "ports": ports}
+
+
+def nmap_full_rescan(ip, tool, task_id=None, project_id=None, udp=False,
+                     cancelled=None):
+    """A whole-host nmap rescan, rather than only the ports already known.
+
+    The known-ports scan (nmap_rescan) can only confirm what a sweep already
+    found; this is what you reach for when you suspect the sweep under-reported.
+    UDP needs root, which this build has.
+    """
+    require_tool("nmap")
+    cancelled = cancelled or (lambda: False)
+
+    # Every TCP port is slow but finishes. Every UDP port is not: nmap sends one
+    # probe per port and waits for an ICMP unreachable that rate-limited hosts
+    # emit once a second, so a full UDP sweep is roughly a day per host. Cap it.
+    selector = ["--top-ports", "200"] if udp else ["-p", "-"]
+    out, parsed, cmd = _run_nmap(task_id, ip, [], udp=udp, port_selector=selector)
+    if cancelled():
+        raise ScanCancelled(f"Rescan of {ip} stopped during the nmap scan.")
+
+    heading = ("# UDP service scan over nmap's top 200 ports" if udp
+               else "# TCP service/script scan over every port (-p-)")
+    scan_id = uuid.uuid4().hex[:12]
+    shots, note = shots_mod.capture(
+        ip, parsed, scan_id,
+        spawn=lambda cmd, **kw: registry.spawn(rescan_key(task_id, ip), cmd, **kw),
+        cancelled=cancelled)
+    sections = [f"{heading}\n{out}"]
+    if note:
+        sections.append(f"# Web screenshots: {note}")
+
+    store.save_nmap_scan(scan_id, ip, tool, cmd, "\n\n".join(sections),
+                         parsed, shots, task_id=task_id, project_id=project_id)
+    if task_id and parsed:
+        store.replace_findings(task_id, ip, parsed, source="nmap")
+
+    return {"ip": ip, "ports": parsed, "scan_id": scan_id,
+            "screenshots": len(shots), "note": note, "stopped": cancelled()}
+
+
+def rustscan_rescan(ip, task_id=None, cancelled=None):
+    """Full-port TCP rescan of one host with rustscan.
+
+    Kernel sockets, so it reaches hosts behind an IPsec/VPN tunnel that masscan
+    cannot, and needs no privilege.
+    """
+    require_tool("rustscan")
+    cancelled = cancelled or (lambda: False)
+
+    run_dir = _run_dir(task_id or "adhoc")
+    key = rescan_key(task_id, ip)
+    cmd = ["rustscan", "-a", ip, "--no-banner", "-n", "-g", "--scripts", "none",
+           "-r", "1-65535", "-b", str(RUSTSCAN_BATCH), "-u", str(RUSTSCAN_ULIMIT),
+           "-t", str(RUSTSCAN_TIMEOUT_MS), "--tries", str(RUSTSCAN_TRIES)]
+    proc = registry.spawn(key, cmd, cwd=run_dir)
+    try:
+        out, _ = proc.communicate(timeout=NMAP_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        registry.stop(key, grace=5)
+        out = ""
+    finally:
+        registry.release(key, proc)
+
+    if cancelled():
+        raise ScanCancelled(f"Rescan of {ip} stopped.")
+
+    ports = []
+    for line in (out or "").splitlines():
+        hit = parse_rustscan_line(line)
+        if hit:
+            for port in hit[1]:
+                ports.append({"port": port, "proto": "tcp", "state": "open"})
+    if task_id:
+        store.add_findings(task_id, ip, ports, source="rustscan")
+    return {"ip": ip, "ports": ports}
+
+
+# Every per-host rescan the interface can offer. Defined here so the dropdown
+# and the code that runs it cannot drift apart, and so a tool that is not
+# installed can be marked unavailable rather than failing only after a click.
+RESCAN_TOOLS = [
+    {"key": "nmap_deep", "label": "nmap -sC -sV (known ports)", "tool": "nmap",
+     "note": "Service and script scan over the ports already found, plus web "
+             "screenshots. The usual follow-up.",
+     "run": lambda ip, o: nmap_rescan(ip, "nmap_deep", **o)},
+    {"key": "nmap_tcp", "label": "nmap all TCP (-p-)", "tool": "nmap",
+     "note": "Every TCP port with service detection. Slow, but the most "
+             "trustworthy answer when a sweep looks thin.",
+     "run": lambda ip, o: nmap_full_rescan(ip, "nmap_tcp", udp=False, **o)},
+    {"key": "nmap_udp", "label": "nmap UDP (top 200)", "tool": "nmap",
+     "note": "nmap's top 200 UDP ports. A full UDP sweep would take about a day "
+             "per host, so this is capped.",
+     "run": lambda ip, o: nmap_full_rescan(ip, "nmap_udp", udp=True, **o)},
+    {"key": "rustscan_tcp", "label": "rustscan all TCP", "tool": "rustscan",
+     "note": "Every TCP port over kernel sockets: fast, needs no privilege, "
+             "and works through IPsec and VPN tunnels.",
+     "run": lambda ip, o: rustscan_rescan(ip, task_id=o.get("task_id"),
+                                          cancelled=o.get("cancelled"))},
+    {"key": "masscan_tcp", "label": "masscan all TCP", "tool": "masscan",
+     "note": "Fastest full TCP sweep. Needs root and cannot cross a tunnel.",
+     "run": lambda ip, o: masscan_rescan(ip, "tcp", task_id=o.get("task_id"),
+                                         cancelled=o.get("cancelled"))},
+    {"key": "masscan_udp", "label": "masscan all UDP", "tool": "masscan",
+     "note": "Every UDP port at masscan speed. Needs root and cannot cross a tunnel.",
+     "run": lambda ip, o: masscan_rescan(ip, "udp", task_id=o.get("task_id"),
+                                         cancelled=o.get("cancelled"))},
+]
+
+
+def rescan_tool(key):
+    return next((t for t in RESCAN_TOOLS if t["key"] == key), None)
+
+
+def rescan_tools_for_ui():
+    """The list the dropdown shows, with availability resolved here."""
+    from shutil import which
+    return [{"key": t["key"], "label": t["label"], "tool": t["tool"],
+             "note": t["note"], "available": which(t["tool"]) is not None}
+            for t in RESCAN_TOOLS]

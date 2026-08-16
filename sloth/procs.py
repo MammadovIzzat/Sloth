@@ -104,6 +104,12 @@ class ProcessRegistry:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 pass
+            # Sweep the whole group even when the leader has already exited. A
+            # shell that backgrounds a job sets that child to ignore SIGINT, so
+            # it outlives the leader and holds the inherited stdout pipe open —
+            # and _signal_group short-circuits once poll() returns, so it never
+            # reaches the survivor. Kill by pgid directly; harmless if empty.
+            _kill_group(proc.pid, signal.SIGKILL)
         return len(procs)
 
     def stop_all(self):
@@ -127,6 +133,21 @@ def _signal_group(proc, sig):
             return True
         except (ProcessLookupError, OSError):
             return False
+
+
+def _kill_group(pid, sig):
+    """Signals a process group by leader pid, whatever state the leader is in.
+
+    Separate from _signal_group because that one short-circuits once the leader
+    has exited, which is precisely when a surviving group member needs reaching.
+    Because the child was started with start_new_session=True, its pid is its
+    own process-group id, so a killpg on that pid reaches the whole group.
+    """
+    try:
+        os.killpg(pid, sig)
+        return True
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
 
 
 registry = ProcessRegistry()

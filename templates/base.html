@@ -43,6 +43,11 @@
             <a href="{{ url_for('reports.list_scans') }}"
                {% if nav_section == 'scans' %}aria-current="page"{% endif %}>
                 <i class="ph ph-file-text"></i>Saved nmap scans</a>
+            <a href="{{ url_for('notifications.log') }}"
+               {% if nav_section == 'notifications' %}aria-current="page"{% endif %}>
+                <i class="ph ph-bell"></i>Notifications
+                <span id="notifyBadge" class="nav-badge {{ '' if unseen_notifications else 'hidden' }}"
+                      >{{ unseen_notifications }}</span></a>
             <a href="{{ url_for('auth.account') }}"
                {% if nav_section == 'account' %}aria-current="page"{% endif %}>
                 <i class="ph ph-user-circle"></i>Account</a>
@@ -81,12 +86,16 @@
         {% include "_flash.html" %}
         {% block content %}{% endblock %}
     </main>
+    <div id="toasts" class="toasts"></div>
 </div>
 
 {% block dialogs %}{% endblock %}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/dialogs.js', v=asset_version) }}"></script>
+{% if current_user() %}
+<script src="{{ url_for('static', filename='js/notify.js', v=asset_version) }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

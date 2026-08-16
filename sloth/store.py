@@ -149,17 +149,18 @@ def get_or_create_project(name, description=None):
 
 def create_task(project_id, target, name=None, tcp_ports=None, udp_ports=None,
                 rate=None, notes=None, scan_type="full", discovery=None,
-                top_ports=None, retries=None, wait=None, engine="masscan"):
+                top_ports=None, retries=None, wait=None, engine="masscan",
+                quick_proto="tcp"):
     tid = new_id()
     conn = connect()
     try:
         conn.execute(
             "INSERT INTO tasks (id, project_id, name, target, tcp_ports, udp_ports, rate,"
             " status, created_at, notes, scan_type, discovery, top_ports, retries, wait,"
-            " engine) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " engine, quick_proto) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (tid, project_id, (name or "").strip() or target, target,
              tcp_ports, udp_ports, rate, "pending", now(), notes,
-             scan_type, discovery, top_ports, retries, wait, engine),
+             scan_type, discovery, top_ports, retries, wait, engine, quick_proto),
         )
         conn.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now(), project_id))
         conn.commit()
@@ -171,7 +172,8 @@ def create_task(project_id, target, name=None, tcp_ports=None, udp_ports=None,
 def update_task(task_id, **fields):
     allowed = {"name", "status", "progress", "started_at", "finished_at",
                "error", "notes", "resumable", "tcp_ports", "udp_ports", "rate",
-               "scan_type", "discovery", "top_ports", "retries", "wait", "engine"}
+               "scan_type", "discovery", "top_ports", "retries", "wait", "engine",
+               "quick_proto"}
     sets = {k: v for k, v in fields.items() if k in allowed}
     if not sets:
         return
@@ -482,7 +484,7 @@ def get_nmap_scan(scan_id):
         conn.close()
 
 
-def list_nmap_scans(task_id=None, project_id=None, ip=None):
+def list_nmap_scans(task_id=None, project_id=None, ip=None, search=None):
     sql = ("SELECT n.id, n.ip, n.tool, n.created_at, n.task_id, n.project_id,"
            " n.screenshots_json, t.name AS task_name, p.name AS project_name"
            " FROM nmap_scans n"
@@ -495,6 +497,15 @@ def list_nmap_scans(task_id=None, project_id=None, ip=None):
         where.append("n.project_id = ?"); params.append(project_id)
     if ip:
         where.append("n.ip = ?"); params.append(ip)
+    # One box over the four things worth searching by: address, tool, and the
+    # task and project a scan belongs to. Filtered in SQL so it reaches every
+    # scan, not just whatever page the interface has loaded.
+    term = (search or "").strip()
+    if term:
+        like = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        where.append("(n.ip LIKE ? ESCAPE '\\' OR n.tool LIKE ? ESCAPE '\\'"
+                     " OR t.name LIKE ? ESCAPE '\\' OR p.name LIKE ? ESCAPE '\\')")
+        params += [like, like, like, like]
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY n.created_at DESC"

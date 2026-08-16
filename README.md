@@ -105,7 +105,7 @@ Pick one per run:
 | Type | What runs | Use it for |
 |---|---|---|
 | **Full port scan** | Every selected port, via your chosen engine | Thorough coverage. Pair it with discovery. |
-| **Quick scan** | nmap over its top N ports, with service detection | A fast look at what's really exposed. |
+| **Quick scan** | nmap over its top N ports (TCP, UDP or both), with service detection | A fast look at what's really exposed. |
 | **Host discovery** | A discovery probe only, no port scan | Mapping a range before deciding where to look. |
 
 ### Full-scan engines
@@ -156,13 +156,22 @@ Discovery-only runs record hosts that are up even when they have no open ports.
 1. **Create a project** on the dashboard (client, scope notes).
 2. **Add a task** to it — target, scan type, discovery method, ports.
 3. **Run it.** Hosts and ports stream in live and are saved as they are found.
-4. **Rescan a host** with nmap (`-sC -sV` on TCP, `-sU` on UDP) restricted to the
-   ports masscan already found. Web ports get a headless-browser screenshot.
+4. **Rescan a host** with a choice of tools: nmap over the ports already found
+   (`-sC -sV`, `-sU`), a full nmap `-p-`, nmap UDP top-200, rustscan, or a fresh
+   masscan TCP/UDP sweep. Web ports get a headless-browser screenshot.
 5. **Open the project any time** to browse every host, port and nmap report,
    export the whole thing, or import someone else's export into it.
 
 The dashboard also has a **Quick scan** box for one-off work; those tasks land in
 an automatically created "Quick scans" project.
+
+## Notifications
+
+Scan activity is raised wherever you are — a scan started, discovery found this
+many hosts, it finished with this many ports, a rescan turned up new ports, the
+network dropped. Toasts appear over any page and the sidebar carries an unread
+count. Every one is written to the database first, so the **Notifications** page
+is a durable log: dismissing a toast hides it, it never deletes it.
 
 ## Controls
 
