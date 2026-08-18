@@ -14,6 +14,13 @@ scans.db-shm
 # and the target ranges.
 runs/
 
+# TLS certificate and private key. From a checkout the default path is ./tls/,
+# and a private key must never be committed. Covers a user-supplied pair left
+# in the tree too.
+tls/
+*.pem
+*.key
+
 # Screenshots of client web services captured during scans. Root-anchored on
 # purpose: an unanchored 'screenshots/' would also swallow docs/screenshots/,
 # which holds the README images.

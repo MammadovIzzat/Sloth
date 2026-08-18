@@ -28,6 +28,16 @@ PORT = int(os.environ.get("SLOTH_PORT", "9998"))
 # would hand a shell to anyone who can reach the port.
 DEBUG = os.environ.get("SLOTH_DEBUG", "").lower() in ("1", "true", "yes", "on")
 
+# --- TLS -----------------------------------------------------------------
+# Serve over HTTPS. On when SLOTH_HTTPS is truthy, or --tls is passed. A
+# self-signed certificate is generated on first use if none is supplied, so
+# https works out of the box; point SLOTH_TLS_CERT / SLOTH_TLS_KEY at your own
+# to replace it. The pair lives under the data directory, not the read-only
+# application tree.
+TLS_ENABLED = os.environ.get("SLOTH_HTTPS", "").lower() in ("1", "true", "yes", "on")
+TLS_CERT = os.environ.get("SLOTH_TLS_CERT", os.path.join(DATA_DIR, "tls", "cert.pem"))
+TLS_KEY = os.environ.get("SLOTH_TLS_KEY", os.path.join(DATA_DIR, "tls", "key.pem"))
+
 DEFAULT_RATE = int(os.environ.get("SLOTH_RATE", "1000"))
 DEFAULT_TCP_PORTS = "1-65535"
 DEFAULT_UDP_PORTS = "1-65535"

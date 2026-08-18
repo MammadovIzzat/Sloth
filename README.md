@@ -53,6 +53,23 @@ Then open <http://127.0.0.1:9998>. The first visit asks you to create an
 account — there is no default password. Root is required because masscan needs
 raw sockets; the app warns and refuses to start a sweep without it.
 
+## HTTPS
+
+The tool carries a login and engagement data, so serving it in the clear leaks
+the session cookie and every scan result to anyone sniffing the segment. Add
+`--tls`:
+
+```bash
+sudo python scanner.py --tls
+```
+
+A self-signed certificate is generated under the data directory on first use,
+so this works with no setup — the browser warns once, you accept it, and the
+session cookie gets the `Secure` flag automatically. Point `SLOTH_TLS_CERT` and
+`SLOTH_TLS_KEY` at your own PEM pair (internal CA, mkcert, Let's Encrypt) to
+replace it and drop the warning. `SLOTH_HTTPS=1` is the env-var equivalent of
+`--tls`, and is what the packaged service reads from `/etc/sloth/sloth.conf`.
+
 ## Authentication
 
 Every page and endpoint requires a signed-in session. The first request to a
