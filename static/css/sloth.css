@@ -359,3 +359,19 @@ input[type="file"].input::file-selector-button:hover {
    or radius to soften a square. */
 .brand-logo { width: 30px; height: 30px; display: block; flex: none; }
 .brand-logo-lg { width: 72px; height: 72px; }
+
+/* --- active-rescans strip ----------------------------------------------- */
+/* Shown above the results in either view, so a running rescan always has a
+   reachable Stop even when the (cards-only) per-host Stop is off-screen. */
+.rescan-strip { margin-bottom: var(--space-6); display: flex; flex-direction: column; gap: 6px; }
+.rescan-strip-row {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    padding: 9px var(--space-4);
+    border: 1px solid color-mix(in srgb, #a67ce8 45%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, #a67ce8 8%, transparent);
+    font-size: 13px;
+}
+.rescan-strip-row b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.rescan-strip-row .dot { margin-right: 6px; }
+.rescan-strip-stop { flex: none; }

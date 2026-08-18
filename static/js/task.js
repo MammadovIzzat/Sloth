@@ -270,6 +270,10 @@
             stop.onclick = function () { stopRescan(card, card.dataset.ip, stop); };
             holder.appendChild(stop);
         }
+        // Also show it in the view-independent strip, so a running rescan is
+        // stoppable from the table view too (the card controls only exist in
+        // the cards view, which is not the default).
+        addStripEntry(card.dataset.ip, tool);
     }
 
     function clearRescanning(card, ok) {
@@ -282,11 +286,44 @@
         }
         const stop = holder && holder.querySelector(".rescan-stop");
         if (stop) { stop.remove(); }
+        removeStripEntry(card.dataset.ip);
     }
 
-    function stopRescan(card, ip, button) {
-        button.disabled = true;
-        button.innerText = "✕ Stopping…";
+    // --- the always-visible active-rescans strip --------------------------
+    const strip = document.getElementById("activeRescans");
+
+    function addStripEntry(ip, tool) {
+        if (!strip || strip.querySelector('[data-strip-ip="' + CSS.escape(ip) + '"]')) { return; }
+        const row = document.createElement("div");
+        row.className = "rescan-strip-row";
+        row.setAttribute("data-strip-ip", ip);
+        const label = document.createElement("span");
+        label.innerHTML = "<span class=\"dot dot-live\"></span> Rescanning <b>" +
+            ip + "</b> · " + (tool || "").replace(/_/g, " ");
+        const stop = document.createElement("button");
+        stop.className = "btn btn-ghost rescan-strip-stop";
+        stop.innerText = "✕ Stop";
+        stop.onclick = function () {
+            stop.disabled = true;
+            stop.innerText = "✕ Stopping…";
+            requestStop(ip);
+        };
+        row.appendChild(label);
+        row.appendChild(stop);
+        strip.appendChild(row);
+        strip.classList.remove("hidden");
+    }
+
+    function removeStripEntry(ip) {
+        if (!strip) { return; }
+        const row = strip.querySelector('[data-strip-ip="' + CSS.escape(ip) + '"]');
+        if (row) { row.remove(); }
+        if (!strip.children.length) { strip.classList.add("hidden"); }
+    }
+
+    // The POST itself, shared by the card button and the strip button — the
+    // result comes back over the event stream and clears both.
+    function requestStop(ip) {
         fetch("/tasks/" + window.TASK.id + "/rescan/stop", {
             method: "POST",
             headers: {"Content-Type": "application/json", "X-CSRF-Token": window.TASK.csrf},
@@ -294,12 +331,15 @@
         })
         .then(function (r) { return r.json().then(function (d) { return {ok: r.ok, data: d}; }); })
         .then(function (res) {
-            if (!res.ok) {
-                log("stop " + ip + ": " + (res.data.error || "failed"));
-                clearRescanning(card, true);
-            }
+            if (!res.ok) { log("stop " + ip + ": " + (res.data.error || "failed")); }
         })
         .catch(function (err) { log("stop " + ip + " failed: " + err); });
+    }
+
+    function stopRescan(card, ip, button) {
+        button.disabled = true;
+        button.innerText = "✕ Stopping…";
+        requestStop(ip);
     }
 
     // Fire and forget: the request returns immediately and the result comes back
