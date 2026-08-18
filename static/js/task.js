@@ -37,6 +37,13 @@
         hostCards.set(card.dataset.ip, card);
         addActions(card, card.dataset.ip);
     });
+    // Server-rendered table rows: give each host its rescan control.
+    if (rowsBody) {
+        const seen = {};
+        rowsBody.querySelectorAll("tr[data-ip]").forEach(function (r) {
+            if (!seen[r.dataset.ip]) { seen[r.dataset.ip] = 1; ensureTableAction(r.dataset.ip); }
+        });
+    }
     updateHostCount();
 
     // Reattach to any rescan that was still running when the page loaded.
@@ -186,7 +193,8 @@
             row.dataset.ip = ip;
             row.dataset.port = key;
             row.innerHTML = '<td class="cell-ip"></td><td class="cell-port"></td>'
-                          + '<td class="cell-svc"></td><td class="cell-src"></td>';
+                          + '<td class="cell-svc"></td><td class="cell-src"></td>'
+                          + '<td class="cell-actions"></td>';
             rowsBody.appendChild(row);
         }
         const cells = row.children;
@@ -194,6 +202,7 @@
         cells[1].innerText = key;
         cells[2].innerText = port.service || "\u2014";
         cells[3].innerText = port.source || "";
+        ensureTableAction(ip);
     }
 
     function updateHostMeta(card) {
@@ -224,17 +233,15 @@
 
     // --- per-host rescan --------------------------------------------------
 
-    function addActions(card, ip) {
-        const holder = card.querySelector(".host-actions");
-        if (!holder || holder.dataset.ready) { return; }
-        holder.dataset.ready = "1";
-
+    // The tool picker + Rescan button for one host. Built from the list the
+    // server sends, so the menu and the code that runs it stay in step; a tool
+    // that is not installed stays listed but unpickable. `card` is the host's
+    // card, which the rescan/stop bookkeeping keys on even when the click came
+    // from the table.
+    function buildRescanControl(card, ip) {
         const select = document.createElement("select");
         select.className = "input host-tool";
         select.title = "Rescan this host with the selected tool.";
-        // Built from the list the server sends, so the menu and the code that
-        // runs it stay in step. A tool that is not installed stays listed but
-        // unpickable, rather than failing only after the click.
         (window.TASK.rescanTools || []).forEach(function (t) {
             const o = document.createElement("option");
             o.value = t.key;
@@ -243,14 +250,42 @@
             if (!t.available) { o.disabled = true; }
             select.appendChild(o);
         });
-
         const btn = document.createElement("button");
         btn.className = "btn btn-secondary rescan-btn";
         btn.innerText = "🔄 Rescan";
         btn.onclick = function () { rescan(card, ip, select.value); };
+        const wrap = document.createElement("span");
+        wrap.className = "rescan-control";
+        wrap.appendChild(select);
+        wrap.appendChild(btn);
+        return wrap;
+    }
 
-        holder.appendChild(select);
-        holder.appendChild(btn);
+    function addActions(card, ip) {
+        const holder = card.querySelector(".host-actions");
+        if (!holder || holder.dataset.ready) { return; }
+        holder.dataset.ready = "1";
+        holder.appendChild(buildRescanControl(card, ip));
+    }
+
+    // The same control in the table view — one per host, on its first row, so a
+    // long sweep in the default table view can still rescan a specific IP.
+    function ensureTableAction(ip) {
+        if (!rowsBody) { return; }
+        const row = rowsBody.querySelector('tr[data-ip="' + CSS.escape(ip) + '"]');
+        if (!row) { return; }
+        let cell = row.querySelector(".cell-actions");
+        if (!cell) { return; }
+        // Move any control off a stale first row (rows for a host can be rebuilt
+        // by renderPorts) and onto the current one.
+        rowsBody.querySelectorAll('tr[data-ip="' + CSS.escape(ip) + '"] .cell-actions.has-control')
+            .forEach(function (c) {
+                if (c !== cell) { c.innerHTML = ""; c.classList.remove("has-control"); }
+            });
+        if (cell.dataset.ready) { return; }
+        cell.dataset.ready = "1";
+        cell.classList.add("has-control");
+        cell.appendChild(buildRescanControl(cardFor(ip), ip));
     }
 
     function markRescanning(card, tool) {

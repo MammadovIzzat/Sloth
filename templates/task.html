@@ -183,8 +183,9 @@
                  style="padding:var(--space-2) var(--space-4) var(--space-4);overflow-x:auto">
                 <table class="table" style="min-width:440px">
                     <thead><tr>
-                        <th style="width:24%">Host</th><th style="width:18%">Port</th>
-                        <th>Service</th><th style="width:18%">Source</th>
+                        <th style="width:22%">Host</th><th style="width:16%">Port</th>
+                        <th>Service</th><th style="width:14%">Source</th>
+                        <th style="width:1%"></th>
                     </tr></thead>
                     <tbody id="resultsRows">
                     {% for h in hosts %}{% for p in h['ports'] %}
@@ -193,6 +194,7 @@
                             <td class="cell-port">{{ p['port'] }}/{{ p['proto'] }}</td>
                             <td class="cell-svc">{{ p['service'] or '—' }}</td>
                             <td class="cell-src">{{ p['source'] }}</td>
+                            <td class="cell-actions"{% if loop.first %} data-first="1"{% endif %}></td>
                         </tr>
                     {% endfor %}{% endfor %}
                     </tbody>

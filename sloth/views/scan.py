@@ -9,7 +9,7 @@ from flask import (Blueprint, Response, abort, jsonify, render_template,
 from .. import store
 from ..discovery import get_profile, profiles_for_ui
 from ..engine import (ScanBusy, ScanError, manager, paused_conf_path, read_log,
-                      rescan_tools_for_ui)
+                      rescan_tool, rescan_tools_for_ui)
 from ..netutil import count_targets, is_valid_ip
 from ..procs import registry
 from ..scanconfig import ENGINES, QUICK_PROTOCOLS, SCAN_TYPES, parse_scan_config
@@ -182,7 +182,9 @@ def rescan(task_id):
         return jsonify({"error": "IP missing"}), 400
     if not is_valid_ip(ip):
         return jsonify({"error": "Invalid IP"}), 400
-    if tool not in ("nmap_deep", "masscan_tcp", "masscan_udp"):
+    # Validate against the tool registry, so a new rescan tool works the moment
+    # it is added there — this used to be a hardcoded list that drifted.
+    if rescan_tool(tool) is None:
         return jsonify({"error": f"Unknown tool: {tool}"}), 400
 
     try:

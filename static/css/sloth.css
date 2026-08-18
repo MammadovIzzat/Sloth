@@ -375,3 +375,13 @@ input[type="file"].input::file-selector-button:hover {
 .rescan-strip-row b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .rescan-strip-row .dot { margin-right: 6px; }
 .rescan-strip-stop { flex: none; }
+
+/* --- rescan control in the table view ----------------------------------- */
+/* The same tool-picker + button used on the cards, one per host on its first
+   row, so a rescan is reachable in the default table view too. Compact so the
+   column stays narrow. */
+.cell-actions { white-space: nowrap; text-align: right; }
+.rescan-control { display: inline-flex; align-items: center; gap: 6px; }
+.rescan-control .host-tool { max-width: 190px; font-size: 12px; padding: 3px 6px; }
+.rescan-control .rescan-btn { padding: 4px 10px; white-space: nowrap; }
+td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
