@@ -180,15 +180,19 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 .split > .split-aside {
   flex: 1 1 240px; min-width: 0;
   display: flex; flex-direction: column; gap: var(--space-4);
-  /* Follows you down a long results table instead of scrolling away. */
+  /* Follows you down a long results table, and is its own scroll container
+     bounded to the viewport — so the Nmap reports at the bottom of the rail are
+     always reachable without scrolling the whole page down past every result. */
   position: sticky; top: var(--space-4);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
 }
-@media (max-width: 900px) { .split > .split-aside { position: static; } }
+@media (max-width: 900px) { .split > .split-aside { position: static; max-height: none; overflow: visible; } }
 
 /* The log is the column's reason to exist — let it fill the space rather than
    sitting as a short card with emptiness under it. */
 .log-card { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-.log-card .log { flex: 1 1 auto; min-height: 190px; max-height: min(58vh, 460px); }
+.log-card .log { flex: 1 1 auto; min-height: 160px; max-height: min(42vh, 380px); }
 .log-head { display: flex; align-items: center; justify-content: space-between;
             gap: var(--space-2); margin-bottom: 10px; }
 .hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.6;
@@ -385,3 +389,9 @@ input[type="file"].input::file-selector-button:hover {
 .rescan-control .host-tool { max-width: 190px; font-size: 12px; padding: 3px 6px; }
 .rescan-control .rescan-btn { padding: 4px 10px; white-space: nowrap; }
 td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
+
+/* --- nmap reports list -------------------------------------------------- */
+.nmap-list { display: flex; flex-direction: column; gap: 6px;
+             max-height: 34vh; overflow-y: auto; }
+.nmap-entry { font-size: 12px; }
+.nmap-sort { width: auto; min-height: 26px; font-size: 11px; padding: 2px 6px; }

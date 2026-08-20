@@ -248,18 +248,26 @@
                 <pre id="logBox" class="log">{{ scan_log }}</pre>
             </div>
 
-            {% if nmap_scans %}
-            <div class="card elev-sm" style="padding:var(--space-4)">
-                <h6 class="card-kicker" style="margin:0 0 10px">Nmap reports</h6>
-                <div id="nmapList" style="display:flex;flex-direction:column;gap:6px">
+            <div id="nmapReports" class="card elev-sm {{ 'hidden' if not nmap_scans }}"
+                 style="padding:var(--space-4)">
+                <div class="log-head" style="margin-bottom:10px">
+                    <h6 class="card-kicker" style="margin:0">Nmap reports</h6>
+                    <select id="nmapSort" class="input nmap-sort" title="Sort the reports">
+                        <option value="new">Newest first</option>
+                        <option value="old">Oldest first</option>
+                        <option value="ip">By IP</option>
+                    </select>
+                </div>
+                <div id="nmapList" class="nmap-list">
                     {% for s in nmap_scans %}
                     <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}"
-                       style="font-size:12px" class="ellipsis">
-                        {{ s['ip'] }} · {{ s['created_at']|shortdate }}</a>
+                       class="ellipsis nmap-entry" data-ip="{{ s['ip'] }}"
+                       data-ts="{{ s['created_at'] }}" data-tool="{{ s['tool'] }}">
+                        {{ s['ip'] }} · {{ s['created_at']|shortdate }}
+                        {%- if s['tool'] %} · {{ s['tool'] }}{% endif %}</a>
                     {% endfor %}
                 </div>
             </div>
-            {% endif %}
 
             <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
                   onsubmit="return confirm('Delete this task and its findings?')">

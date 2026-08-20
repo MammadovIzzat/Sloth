@@ -434,12 +434,58 @@
 
         const list = document.getElementById("nmapList");
         if (list) {
+            const now = new Date();
+            const ts = now.getFullYear() + "-" +
+                String(now.getMonth() + 1).padStart(2, "0") + "-" +
+                String(now.getDate()).padStart(2, "0") + " " +
+                String(now.getHours()).padStart(2, "0") + ":" +
+                String(now.getMinutes()).padStart(2, "0") + ":" +
+                String(now.getSeconds()).padStart(2, "0");
             const entry = document.createElement("a");
-            entry.className = "ellipsis";
+            entry.className = "ellipsis nmap-entry";
             entry.href = link.href;
-            entry.innerText = ip + " · just now";
-            list.prepend(entry);
+            entry.dataset.ip = ip;
+            entry.dataset.ts = ts;
+            entry.dataset.tool = data.tool || "";
+            entry.innerText = ip + " · just now" + (data.tool ? " · " + data.tool : "");
+            list.appendChild(entry);
+            sortReports();
+            document.getElementById("nmapReports").classList.remove("hidden");
         }
+    }
+
+    // --- sorting the nmap reports -----------------------------------------
+    const nmapSort = document.getElementById("nmapSort");
+
+    function ipKey(ip) {
+        // IPv4 sorts numerically (so .2 comes before .10); anything else sorts
+        // as text after all v4 addresses.
+        const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip || "");
+        if (!m) { return [1, ip || ""]; }
+        return [0, ((+m[1]) * 256 + (+m[2])) * 256 * 256 + (+m[3]) * 256 + (+m[4])];
+    }
+
+    function sortReports() {
+        const list = document.getElementById("nmapList");
+        if (!list) { return; }
+        const how = nmapSort ? nmapSort.value : "new";
+        const rows = Array.prototype.slice.call(list.querySelectorAll(".nmap-entry"));
+        rows.sort(function (a, b) {
+            if (how === "ip") {
+                const ka = ipKey(a.dataset.ip), kb = ipKey(b.dataset.ip);
+                if (ka[0] !== kb[0]) { return ka[0] - kb[0]; }
+                return ka[1] < kb[1] ? -1 : ka[1] > kb[1] ? 1 : 0;
+            }
+            const ta = a.dataset.ts || "", tb = b.dataset.ts || "";
+            const cmp = ta < tb ? -1 : ta > tb ? 1 : 0;
+            return how === "old" ? cmp : -cmp;   // "new" = newest first
+        });
+        rows.forEach(function (r) { list.appendChild(r); });
+    }
+
+    if (nmapSort) {
+        nmapSort.addEventListener("change", sortReports);
+        sortReports();   // apply the default (newest first) to server-rendered rows
     }
 
     // --- network banner ---------------------------------------------------
