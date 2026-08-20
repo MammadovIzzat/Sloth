@@ -367,7 +367,7 @@ input[type="file"].input::file-selector-button:hover {
 /* --- active-rescans strip ----------------------------------------------- */
 /* Shown above the results in either view, so a running rescan always has a
    reachable Stop even when the (cards-only) per-host Stop is off-screen. */
-.rescan-strip { margin-bottom: var(--space-6); display: flex; flex-direction: column; gap: 6px; }
+.rescan-strip { display: flex; flex-direction: column; gap: 6px; }
 .rescan-strip-row {
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
     padding: 9px var(--space-4);

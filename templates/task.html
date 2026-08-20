@@ -150,10 +150,6 @@
 
     <div id="networkAlertBox" class="hidden" style="margin-bottom:var(--space-6)"></div>
 
-    {# Running per-host rescans, shown regardless of the table/cards toggle so a
-       long nmap always has a reachable Stop. Populated by task.js. #}
-    <div id="activeRescans" class="rescan-strip hidden"></div>
-
     <div class="split">
         <div class="split-main">
             <div class="row-between" style="margin-bottom:var(--space-3)">
@@ -268,6 +264,11 @@
                     {% endfor %}
                 </div>
             </div>
+
+            {# Running per-host rescans, in the rail beside the reports they
+               produce, so a long nmap always has a reachable Stop. Populated by
+               task.js regardless of the table/cards toggle. #}
+            <div id="activeRescans" class="rescan-strip hidden"></div>
 
             <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
                   onsubmit="return confirm('Delete this task and its findings?')">
