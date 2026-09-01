@@ -21,18 +21,15 @@ tls/
 *.pem
 *.key
 
-# Screenshots of client web services captured during scans. Root-anchored on
-# purpose: an unanchored 'screenshots/' would also swallow docs/screenshots/,
-# which holds the README images.
-/screenshots/
+# Screenshots of client web services captured during scans.
+screenshots/
 
 # Recovered scan data and stray masscan state from earlier runs.
 legacy_scans_backup.json
 restore_legacy_scans.py
 paused.conf
 
-# Build output.
-dist/
+# Python bytecode.
 __pycache__/
 *.py[cod]
 
@@ -46,6 +43,3 @@ venv/
 # Output written by other tools run from this directory. Named after live
 # hosts, so it is engagement data whatever produced it.
 reports/
-# Electron-branch build artifacts, not part of the web build.
-node_modules/
-packaging/arch/

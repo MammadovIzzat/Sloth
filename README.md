@@ -5,45 +5,7 @@ inside **projects**; each project holds **tasks** (one target range each), and a
 task's findings are written to SQLite as they arrive — so you can close the tab,
 restart the server, and open the project later to read the results.
 
-## Screenshots
-
-Every scan belongs to a project; ad-hoc runs land in "Quick scans".
-
-![Projects dashboard](docs/screenshots/dashboard.png)
-
-A project holds tasks — one target range each — with every host it has found
-across all of them.
-
-![A project: tasks, hosts and saved nmap reports](docs/screenshots/project.png)
-
-Results stream in live. Hosts render as a table (one row per port, for a sweep
-that turned up dozens) or as cards, and the scanner's own output sits alongside
-so a scan that found nothing still explains itself.
-
-![A finished scan: results, scanner log and controls](docs/screenshots/task.png)
-
-Each run picks its own engine and discovery probe, and every choice states the
-trade-off it carries.
-
-![Starting a scan: engine and host-discovery options](docs/screenshots/new-task.png)
-
-Per-host nmap scans are saved in full, script output included.
-
-![Saved nmap report](docs/screenshots/nmap-report.png)
-
-Regenerate with `./make-screenshots.py` — it renders the real pages against a
-throwaway database of invented data.
-
-## Install
-
-From the Debian package (Debian, Ubuntu, Kali):
-
-```bash
-sudo apt install ./sloth_2.1.0_all.deb
-sudo systemctl enable --now sloth
-```
-
-Or run straight from a checkout:
+## Run
 
 ```bash
 sudo python scanner.py
@@ -68,7 +30,7 @@ so this works with no setup — the browser warns once, you accept it, and the
 session cookie gets the `Secure` flag automatically. Point `SLOTH_TLS_CERT` and
 `SLOTH_TLS_KEY` at your own PEM pair (internal CA, mkcert, Let's Encrypt) to
 replace it and drop the warning. `SLOTH_HTTPS=1` is the env-var equivalent of
-`--tls`, and is what the packaged service reads from `/etc/sloth/sloth.conf`.
+`--tls`.
 
 ## Authentication
 
@@ -285,62 +247,6 @@ runs/<task_id>/         per-task working dir (masscan's paused.conf lives here)
 screenshots/            captured PNGs
 ```
 
-## Clean source archive
-
-```bash
-./make-source-zip.py            # → dist/sloth-<version>-src.zip
-```
-
-For sharing or publishing the code without any of your engagement data. Files
-are chosen from an explicit **allowlist** in the script — a denylist would
-quietly ship whatever you add later that nobody remembered to exclude.
-
-Never included: `scans.db` (projects, findings, **password and API-token
-hashes**), `runs/` (the **session signing key**, scan logs, masscan resume files
-naming your adapter and targets), `screenshots/` (captured images of client
-systems), `dist/`, `__pycache__`.
-
-Before writing the archive it scans everything staged and **refuses to build**
-if it finds a password hash, an API token, a private key or a masscan resume
-fragment. Stray IP addresses that don't look like documentation examples are
-reported as a warning to eyeball rather than a hard failure.
-
-The result is self-sufficient: extract it and you can run the tool and rebuild
-the `.deb` from it.
-
-## Building the .deb
-
-```bash
-./build-deb.sh            # → dist/sloth_<version>_all.deb
-VERSION=2.2.0 MAINTAINER="You <you@example.com>" ./build-deb.sh
-```
-
-A `.deb` is an `ar` archive of `debian-binary`, `control.tar.gz` and
-`data.tar.gz`, so the script builds one with nothing but `ar`, `tar` and `gzip`
-— it works on non-Debian machines. If `dpkg-deb` is installed it is used
-instead, since it also runs the usual consistency checks.
-
-The package installs:
-
-| Path | Contents |
-|---|---|
-| `/usr/lib/sloth/` | application code, templates, static files |
-| `/usr/bin/sloth` | launcher (`--help`, `--version`, `--host`, `--port`) |
-| `/lib/systemd/system/sloth.service` | service unit |
-| `/etc/sloth/sloth.conf` | configuration (a conffile — your edits survive upgrades) |
-| `/var/lib/sloth/` | database, run directories, screenshots |
-
-The service runs as a dedicated **unprivileged** `sloth` account rather
-than root. The scanners still get raw sockets through
-`AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN`, which child processes inherit
-across exec — so masscan and fping work without handing the whole web
-application root. When the code lives under `/usr`, the app puts its data in
-`/var/lib/sloth` automatically; from a checkout it stays alongside the
-source.
-
-Scan results are engagement data, so `apt remove` leaves `/var/lib/sloth`
-alone. Only `apt purge` deletes it, along with the config and the service user.
-
 ## Configuration
 
 | Env var | Default | Purpose |
@@ -392,5 +298,3 @@ establish what is actually true about a specific host.
 - Deleting a task or project also removes its `runs/` directory and screenshots.
 - The database upgrades itself in place. Scans saved by the old build are filed
   under a "Legacy scans" project on first run.
-- The stray `paused.conf` in the repository root is left over from the old
-  build; masscan resume files now live under `runs/<task_id>/`.
