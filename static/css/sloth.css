@@ -420,7 +420,11 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 .nmap-list { display: flex; flex-direction: column; gap: 6px;
              max-height: 240px; overflow-y: auto;
              padding-right: 4px; }
-.nmap-entry { font-size: 12px; }
+/* flex: none — without it the column crushes every entry to a 2px sliver to fit
+   max-height (min-height:auto + overflow:hidden lets them shrink past content),
+   so the list looks empty. They must keep their line height and let the list
+   scroll instead. */
+.nmap-entry { font-size: 12px; flex: none; }
 .nmap-sort { width: auto; min-height: 26px; font-size: 11px; padding: 2px 6px; }
 .nmap-search { min-height: 28px; font-size: 12px; padding: 4px 8px; }
 .report-empty { margin: 4px 2px 2px; font-size: 12px; line-height: 1.5;
