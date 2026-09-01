@@ -5,8 +5,7 @@
 
 masscan needs raw sockets, so this wants root (or CAP_NET_RAW, which is how the
 packaged systemd unit runs it without root). The application itself lives in the
-sloth/ package; the previous single-file build is kept alongside as
-scanner_v1_backup.py.
+sloth/ package.
 """
 import os
 import sys

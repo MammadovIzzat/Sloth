@@ -2,7 +2,6 @@
 """Builds a clean source archive — code only, none of your engagement data.
 
     ./make-source-zip.py                 → dist/sloth-<version>-src.zip
-    ./make-source-zip.py --no-legacy     omit the superseded single-file build
     ./make-source-zip.py --out /tmp/x.zip
 
 Files are chosen from an explicit **allowlist**. That is the whole point: a
@@ -42,10 +41,8 @@ ALLOW = [
     # so exempt from the blanket .png ban below.
     ("static/img", "*.png"),
     ("packaging", "*"),
-    (".", "extract-design.py"),
     (".", "make-screenshots.py"),
 ]
-LEGACY = (".", "scanner_v1_backup.py")
 
 # Extensions and names that must never appear, whatever the allowlist says.
 FORBIDDEN_NAMES = {
@@ -84,8 +81,8 @@ TEXT_SUFFIXES = (".py", ".html", ".js", ".css", ".md", ".sh", ".conf",
                  ".service", ".launcher", "")
 
 
-def collect(include_legacy):
-    patterns = list(ALLOW) + ([LEGACY] if include_legacy else [])
+def collect():
+    patterns = list(ALLOW)
     found = []
     for base, glob in patterns:
         root = os.path.join(HERE, base)
@@ -156,8 +153,6 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", help="output path for the zip")
-    ap.add_argument("--no-legacy", action="store_true",
-                    help="omit scanner_v1_backup.py")
     args = ap.parse_args()
 
     sys.path.insert(0, HERE)
@@ -166,7 +161,7 @@ def main():
     except Exception:
         version = "dev"
 
-    paths = collect(include_legacy=not args.no_legacy)
+    paths = collect()
     if not paths:
         sys.exit("[!] Nothing matched the allowlist — run this from the project directory.")
 

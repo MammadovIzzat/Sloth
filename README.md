@@ -249,19 +249,12 @@ counted rather than aborting the import.
 
 ## Interface
 
-The UI is **Nocturne**, a design system exported from `Sloth.html` (a bundler
-export from the design tool). `./extract-design.py` unpacks its stylesheet and
-webfonts into `static/`:
-
-```bash
-./extract-design.py      # → static/css/nocturne.css + static/fonts/
-```
-
+The UI is **Nocturne**, a self-contained design system committed under `static/`.
 Nothing is fetched at runtime — no CDN, no build step — so the interface renders
 on a client network with no route out, which the previous Tailwind-from-CDN
 setup did not.
 
-- `static/css/nocturne.css` — the design system, regenerated, never hand-edited
+- `static/css/nocturne.css` — the design system, never hand-edited
 - `static/css/sloth.css` — app layout on top of it (shell, sidebar, host views)
 - `static/js/dialogs.js` — modal open/close
 - `static/js/scan-fields.js` — shows only the fields a scan type and engine use
@@ -291,8 +284,6 @@ scans.db                results
 runs/<task_id>/         per-task working dir (masscan's paused.conf lives here)
 screenshots/            captured PNGs
 ```
-
-`scanner_v1_backup.py` is the previous single-file build, kept for reference.
 
 ## Clean source archive
 
