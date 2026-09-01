@@ -183,6 +183,7 @@
             pill.appendChild(svc);
         }
         updateHostMeta(card);
+        updateCardCount(card);
     }
 
     // Table view — one row per port, so a large sweep stays readable.
@@ -454,7 +455,13 @@
             list.appendChild(entry);
             sortReports();
             if (nmapSearch && nmapSearch.value) { applyNmapSearch(); }
+            // First report on this task: reveal the sort/search, drop the
+            // empty-state note. The panel itself is always present now.
             document.getElementById("nmapReports").classList.remove("hidden");
+            var emptyNote = document.getElementById("nmapEmpty");
+            if (emptyNote) { emptyNote.classList.add("hidden"); }
+            if (nmapSort) { nmapSort.classList.remove("hidden"); }
+            if (nmapSearch) { nmapSearch.classList.remove("hidden"); }
         }
     }
 
@@ -743,30 +750,42 @@
         card.classList.toggle("collapsed", collapsed);
     }
 
+    // A muted "N ports" count so a collapsed row still says something.
+    function updateCardCount(card) {
+        var badge = card.querySelector(".host-count");
+        if (!badge) { return; }
+        var n = card.querySelectorAll(".ports-container [data-port]").length;
+        badge.textContent = n ? n + (n === 1 ? " port" : " ports") : "";
+    }
+
     function prepareCard(card) {
         if (card.dataset.collapsePrepared) { setCardCollapsed(card, !cardsExpanded); return; }
         card.dataset.collapsePrepared = "1";
         var head = card.querySelector(".host-head");
-        if (head && !head.querySelector(".card-caret")) {
-            var caret = document.createElement("button");
-            caret.type = "button";
-            caret.className = "card-caret";
-            caret.setAttribute("aria-label", "Expand or collapse this host");
-            caret.innerHTML = '<i class="ph ph-caret-right"></i>';
-            caret.addEventListener("click", function (e) {
-                e.stopPropagation();
+        if (head) {
+            head.classList.add("host-head-toggle");
+            // A small chevron leads the row; the whole header is the hit target.
+            if (!head.querySelector(".card-caret")) {
+                var caret = document.createElement("i");
+                caret.className = "ph ph-caret-right card-caret";
+                caret.setAttribute("aria-hidden", "true");
+                head.insertBefore(caret, head.firstChild);
+            }
+            // A port count sits beside the IP so a closed row is informative.
+            var id = head.querySelector(".host-id");
+            if (id && !id.querySelector(".host-count")) {
+                var badge = document.createElement("span");
+                badge.className = "tag tag-neutral host-count";
+                id.appendChild(badge);
+            }
+            head.addEventListener("click", function (e) {
+                // Anything interactive in the head (the rescan picker, its button)
+                // does its own thing; only bare header clicks toggle.
+                if (e.target.closest(".host-actions")) { return; }
                 setCardCollapsed(card, !card.classList.contains("collapsed"));
             });
-            head.insertBefore(caret, head.firstChild);
-            // The id area toggles too, but the rescan controls beside it must not.
-            var id = head.querySelector(".host-id");
-            if (id) {
-                id.style.cursor = "pointer";
-                id.addEventListener("click", function () {
-                    setCardCollapsed(card, !card.classList.contains("collapsed"));
-                });
-            }
         }
+        updateCardCount(card);
         setCardCollapsed(card, !cardsExpanded);
     }
 

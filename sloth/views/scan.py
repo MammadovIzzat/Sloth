@@ -28,7 +28,7 @@ def task_detail(task_id):
         current_project_id=task["project_id"],
         task=task,
         hosts=store.task_hosts(task_id),
-        nmap_scans=store.list_nmap_scans(task_id=task_id),
+        nmap_scans=store.list_task_reports(task_id),
         host_count=count_targets(task["target"]),
         is_active=(manager.active_task == task_id),
         is_paused=registry.is_paused(task_id),

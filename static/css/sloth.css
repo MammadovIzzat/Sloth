@@ -235,14 +235,24 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 .host-empty { font-size: 12px; font-style: italic;
               color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 
-/* Collapsible hosts: the head (ip + rescan control) always shows; the ports
-   fold away so a big sweep is a scannable list, not an endless wall. */
-.card-caret { flex: none; display: inline-flex; align-items: center; justify-content: center;
-              width: 22px; height: 22px; margin-right: 2px; border: 0; cursor: pointer;
-              background: transparent; color: inherit; font-size: 14px;
-              transition: transform .12s ease; }
-.card-caret i { line-height: 1; }
+/* Collapsible hosts: the header (chevron · ip · port count · rescan) always
+   shows; the ports fold away so a big sweep is a scannable list, not a wall.
+   Closed rows are tight and quiet; only the chevron and a hover tint hint that
+   the row opens. */
+.host-head-toggle { cursor: pointer; user-select: none;
+                    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6));
+                    padding: var(--space-3) var(--space-6);
+                    border-radius: var(--radius-md); transition: background .12s ease; }
+.host-head-toggle:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.card-caret { flex: none; font-size: 13px; line-height: 1;
+              color: color-mix(in srgb, var(--color-text) 45%, transparent);
+              transition: transform .15s ease; }
 .host-card:not(.collapsed) .card-caret { transform: rotate(90deg); }
+.host-count { font-size: 10.5px; padding: 1px 7px; letter-spacing: .01em;
+              color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.host-count:empty { display: none; }
+/* Collapsed: no gap below the header and no port block, so the card is one line. */
+.host-card.collapsed { gap: 0; }
 .host-card.collapsed .ports-container { display: none; }
 
 /* Filter + expand-all toolbar above the results. */
@@ -413,3 +423,7 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 .nmap-entry { font-size: 12px; }
 .nmap-sort { width: auto; min-height: 26px; font-size: 11px; padding: 2px 6px; }
 .nmap-search { min-height: 28px; font-size: 12px; padding: 4px 8px; }
+.report-empty { margin: 4px 2px 2px; font-size: 12px; line-height: 1.5;
+                color: color-mix(in srgb, var(--color-text) 50%, transparent); }
+.report-empty b { color: color-mix(in srgb, var(--color-text) 75%, transparent);
+                  font-weight: 600; }

@@ -253,17 +253,21 @@
                 <pre id="logBox" class="log">{{ scan_log }}</pre>
             </div>
 
-            <div id="nmapReports" class="card elev-sm {{ 'hidden' if not nmap_scans }}"
-                 style="padding:var(--space-4)">
+            {# Always shown: an empty panel that explains itself beats a blank box
+               that reads as broken. Reports follow the host, so a report run
+               under another scan of the same target still shows here. #}
+            <div id="nmapReports" class="card elev-sm" style="padding:var(--space-4)">
                 <div class="log-head" style="margin-bottom:8px">
                     <h6 class="card-kicker" style="margin:0">Nmap reports</h6>
-                    <select id="nmapSort" class="input nmap-sort" title="Sort the reports">
+                    <select id="nmapSort" class="input nmap-sort {{ 'hidden' if not nmap_scans }}"
+                            title="Sort the reports">
                         <option value="new">Newest first</option>
                         <option value="old">Oldest first</option>
                         <option value="ip">By IP</option>
                     </select>
                 </div>
-                <input id="nmapSearch" class="input nmap-search" type="search" autocomplete="off"
+                <input id="nmapSearch" class="input nmap-search {{ 'hidden' if not nmap_scans }}"
+                       type="search" autocomplete="off"
                        placeholder="Filter reports by IP or tool…" style="margin-bottom:8px">
                 <div id="nmapList" class="nmap-list">
                     {% for s in nmap_scans %}
@@ -274,6 +278,9 @@
                         {%- if s['tool'] %} · {{ s['tool'] }}{% endif %}</a>
                     {% endfor %}
                 </div>
+                <p id="nmapEmpty" class="report-empty {{ 'hidden' if nmap_scans }}">
+                    No nmap reports for these hosts yet. Use <b>Rescan</b> on a host to
+                    run nmap and its report lands here.</p>
             </div>
 
             {# Running per-host rescans, in the rail beside the reports they

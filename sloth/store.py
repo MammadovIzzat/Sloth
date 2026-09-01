@@ -484,6 +484,43 @@ def get_nmap_scan(scan_id):
         conn.close()
 
 
+def list_task_reports(task_id):
+    """Nmap reports to show on a task page.
+
+    A task is a target, not a single run: you might masscan a subnet under one
+    task and later nmap the same hosts under a re-run of it. Filing reports
+    strictly by the task that produced them then hides a host's nmap output from
+    the very task where you are looking at that host. So this returns the task's
+    own reports plus any report in the same project for an IP this task scanned —
+    a host's nmap history follows the host, not the run that happened to save it.
+    """
+    task = get_task(task_id)
+    if task is None:
+        return []
+    conn = connect()
+    try:
+        ips = [r["ip"] for r in conn.execute(
+            "SELECT DISTINCT ip FROM hosts WHERE task_id = ?"
+            " UNION SELECT DISTINCT ip FROM findings WHERE task_id = ?",
+            (task_id, task_id))]
+        clauses = ["n.task_id = ?"]
+        params = [task_id]
+        if task["project_id"] and ips:
+            placeholders = ",".join("?" * len(ips))
+            clauses.append(f"(n.project_id = ? AND n.ip IN ({placeholders}))")
+            params += [task["project_id"], *ips]
+        sql = ("SELECT n.id, n.ip, n.tool, n.created_at, n.task_id, n.project_id,"
+               " n.screenshots_json, t.name AS task_name, p.name AS project_name"
+               " FROM nmap_scans n"
+               " LEFT JOIN tasks t ON t.id = n.task_id"
+               " LEFT JOIN projects p ON p.id = n.project_id"
+               " WHERE " + " OR ".join(clauses) +
+               " ORDER BY n.created_at DESC")
+        return conn.execute(sql, params).fetchall()
+    finally:
+        conn.close()
+
+
 def list_nmap_scans(task_id=None, project_id=None, ip=None, search=None):
     sql = ("SELECT n.id, n.ip, n.tool, n.created_at, n.task_id, n.project_id,"
            " n.screenshots_json, t.name AS task_name, p.name AS project_name"
