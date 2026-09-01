@@ -34,10 +34,18 @@
     </a>
     {% endif %}
 
-    <div class="stack">
+    {% if projects|length > 3 %}
+    <div class="field" style="margin-bottom:var(--space-4)">
+        <input id="projectSearch" class="input" type="search" autocomplete="off"
+               placeholder="Search projects by name, client or description…">
+    </div>
+    {% endif %}
+
+    <div class="stack" id="projectList">
         {% for p in projects %}
         <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
-           class="card elev-sm"
+           class="card elev-sm project-row"
+           data-search="{{ (p['name'] ~ ' ' ~ (p['client'] or '') ~ ' ' ~ (p['description'] or ''))|lower }}"
            style="padding:var(--space-6);flex-direction:row;align-items:flex-start;
                   justify-content:space-between;gap:var(--space-8);color:var(--color-text)">
             <div style="min-width:0">
@@ -69,8 +77,31 @@
             <p class="sub">No projects yet. Create one, or run a quick scan.</p>
         </div>
         {% endfor %}
+        <div id="projectNoMatch" class="card elev-sm hidden"
+             style="padding:var(--space-8);text-align:center">
+            <p class="sub">No project matches that.</p>
+        </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var box = document.getElementById("projectSearch");
+    if (!box) { return; }
+    var rows = Array.prototype.slice.call(document.querySelectorAll(".project-row"));
+    var none = document.getElementById("projectNoMatch");
+    box.addEventListener("input", function () {
+        var q = box.value.trim().toLowerCase();
+        var shown = 0;
+        rows.forEach(function (r) {
+            var hit = !q || (r.dataset.search || "").indexOf(q) !== -1;
+            r.classList.toggle("hidden", !hit);
+            if (hit) { shown++; }
+        });
+        none.classList.toggle("hidden", shown > 0);
+    });
+})();
+</script>
 {% endblock %}
 
 {% block dialogs %}

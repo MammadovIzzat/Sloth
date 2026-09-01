@@ -36,6 +36,7 @@
     document.querySelectorAll("#resultsCards [data-ip]").forEach(function (card) {
         hostCards.set(card.dataset.ip, card);
         addActions(card, card.dataset.ip);
+        prepareCard(card);
     });
     // Server-rendered table rows: give each host its rescan control.
     if (rowsBody) {
@@ -138,6 +139,7 @@
         cardsView.appendChild(card);
         hostCards.set(ip, card);
         addActions(card, ip);
+        prepareCard(card);
         updateHostCount();
         return card;
     }
@@ -146,6 +148,7 @@
         const key = port.port + "/" + port.proto;
         upsertCardPill(ip, port, key);
         upsertTableRow(ip, port, key);
+        if (resultSearch && resultSearch.value) { applyResultSearch(); }
     }
 
     // Cards view — a neutral pill per port, matching the design: port number in
@@ -450,6 +453,7 @@
             entry.innerText = ip + " · just now" + (data.tool ? " · " + data.tool : "");
             list.appendChild(entry);
             sortReports();
+            if (nmapSearch && nmapSearch.value) { applyNmapSearch(); }
             document.getElementById("nmapReports").classList.remove("hidden");
         }
     }
@@ -725,6 +729,101 @@
             applyView(saved);
         }
     } catch (err) { /* ignore */ }
+
+    // --- collapsible cards, result search, report search ------------------
+    // A task opens with cards collapsed: a sweep can find dozens of hosts, and a
+    // wall of expanded port lists is unreadable. The header shows the IP, count
+    // and rescan control; the ports expand on demand.
+    var cardsExpanded = false;
+    var resultSearch = document.getElementById("resultSearch");
+    var nmapSearch = document.getElementById("nmapSearch");
+    var toggleAllBtn = document.getElementById("toggleAll");
+
+    function setCardCollapsed(card, collapsed) {
+        card.classList.toggle("collapsed", collapsed);
+    }
+
+    function prepareCard(card) {
+        if (card.dataset.collapsePrepared) { setCardCollapsed(card, !cardsExpanded); return; }
+        card.dataset.collapsePrepared = "1";
+        var head = card.querySelector(".host-head");
+        if (head && !head.querySelector(".card-caret")) {
+            var caret = document.createElement("button");
+            caret.type = "button";
+            caret.className = "card-caret";
+            caret.setAttribute("aria-label", "Expand or collapse this host");
+            caret.innerHTML = '<i class="ph ph-caret-right"></i>';
+            caret.addEventListener("click", function (e) {
+                e.stopPropagation();
+                setCardCollapsed(card, !card.classList.contains("collapsed"));
+            });
+            head.insertBefore(caret, head.firstChild);
+            // The id area toggles too, but the rescan controls beside it must not.
+            var id = head.querySelector(".host-id");
+            if (id) {
+                id.style.cursor = "pointer";
+                id.addEventListener("click", function () {
+                    setCardCollapsed(card, !card.classList.contains("collapsed"));
+                });
+            }
+        }
+        setCardCollapsed(card, !cardsExpanded);
+    }
+
+    function updateToggleAllLabel() {
+        if (!toggleAllBtn) { return; }
+        var span = toggleAllBtn.querySelector("span");
+        if (span) { span.innerText = cardsExpanded ? "Collapse all" : "Expand all"; }
+    }
+
+    if (toggleAllBtn) {
+        toggleAllBtn.addEventListener("click", function () {
+            cardsExpanded = !cardsExpanded;
+            hostCards.forEach(function (card) { setCardCollapsed(card, !cardsExpanded); });
+            updateToggleAllLabel();
+        });
+    }
+
+    // Filter the results by host, port or service — works in both views. In
+    // cards view a match forces the card open and hides the non-matching pills,
+    // so you land straight on the port you searched for.
+    function applyResultSearch() {
+        var q = (resultSearch ? resultSearch.value : "").trim().toLowerCase();
+        if (rowsBody) {
+            rowsBody.querySelectorAll("tr.host-row").forEach(function (row) {
+                var svc = row.querySelector(".cell-svc");
+                var hay = (row.dataset.ip + " " + (row.dataset.port || "") + " " +
+                           (svc ? svc.textContent : "")).toLowerCase();
+                row.classList.toggle("hidden", !!q && hay.indexOf(q) === -1);
+            });
+        }
+        hostCards.forEach(function (card) {
+            var ip = (card.dataset.ip || "").toLowerCase();
+            var hostHit = !q || ip.indexOf(q) !== -1;
+            var anyPill = false;
+            card.querySelectorAll(".ports-container [data-port]").forEach(function (pill) {
+                var hit = hostHit || pill.textContent.toLowerCase().indexOf(q) !== -1;
+                pill.classList.toggle("hidden", !!q && !hit);
+                if (hit) { anyPill = true; }
+            });
+            var show = hostHit || anyPill;
+            card.classList.toggle("hidden", !!q && !show);
+            if (q && show) { setCardCollapsed(card, false); }      // reveal the match
+            else if (!q) { setCardCollapsed(card, !cardsExpanded); } // restore default
+        });
+    }
+    if (resultSearch) { resultSearch.addEventListener("input", applyResultSearch); }
+
+    function applyNmapSearch() {
+        var q = (nmapSearch ? nmapSearch.value : "").trim().toLowerCase();
+        document.querySelectorAll("#nmapList .nmap-entry").forEach(function (e) {
+            var hay = ((e.dataset.ip || "") + " " + (e.dataset.tool || "")).toLowerCase();
+            e.classList.toggle("hidden", !!q && hay.indexOf(q) === -1);
+        });
+    }
+    if (nmapSearch) { nmapSearch.addEventListener("input", applyNmapSearch); }
+
+    updateToggleAllLabel();
 
     // --- boot -------------------------------------------------------------
 

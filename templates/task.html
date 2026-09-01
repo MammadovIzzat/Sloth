@@ -173,6 +173,15 @@
                 </div>
             </div>
 
+            <div class="results-toolbar" style="margin-bottom:var(--space-3)">
+                <input id="resultSearch" class="input result-search" type="search" autocomplete="off"
+                       placeholder="Filter by host, port or service — e.g. 443, http, ssh">
+                {# Only affects the cards view; the button reflects that in JS. #}
+                <button id="toggleAll" class="btn btn-ghost" type="button"
+                        title="Expand or collapse every host card">
+                    <i class="ph ph-arrows-out-line-vertical"></i><span>Expand all</span></button>
+            </div>
+
             {# Both views are rendered; the toggle shows one. task.js keeps them
                in step as findings stream in. #}
             <div id="resultsTable" class="card elev-sm"
@@ -246,7 +255,7 @@
 
             <div id="nmapReports" class="card elev-sm {{ 'hidden' if not nmap_scans }}"
                  style="padding:var(--space-4)">
-                <div class="log-head" style="margin-bottom:10px">
+                <div class="log-head" style="margin-bottom:8px">
                     <h6 class="card-kicker" style="margin:0">Nmap reports</h6>
                     <select id="nmapSort" class="input nmap-sort" title="Sort the reports">
                         <option value="new">Newest first</option>
@@ -254,6 +263,8 @@
                         <option value="ip">By IP</option>
                     </select>
                 </div>
+                <input id="nmapSearch" class="input nmap-search" type="search" autocomplete="off"
+                       placeholder="Filter reports by IP or tool…" style="margin-bottom:8px">
                 <div id="nmapList" class="nmap-list">
                     {% for s in nmap_scans %}
                     <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}"

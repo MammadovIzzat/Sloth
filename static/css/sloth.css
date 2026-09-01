@@ -235,6 +235,22 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 .host-empty { font-size: 12px; font-style: italic;
               color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 
+/* Collapsible hosts: the head (ip + rescan control) always shows; the ports
+   fold away so a big sweep is a scannable list, not an endless wall. */
+.card-caret { flex: none; display: inline-flex; align-items: center; justify-content: center;
+              width: 22px; height: 22px; margin-right: 2px; border: 0; cursor: pointer;
+              background: transparent; color: inherit; font-size: 14px;
+              transition: transform .12s ease; }
+.card-caret i { line-height: 1; }
+.host-card:not(.collapsed) .card-caret { transform: rotate(90deg); }
+.host-card.collapsed .ports-container { display: none; }
+
+/* Filter + expand-all toolbar above the results. */
+.results-toolbar { display: flex; align-items: center; gap: var(--space-3);
+                   margin-bottom: var(--space-4); flex-wrap: wrap; }
+.results-toolbar .result-search { flex: 1 1 240px; min-width: 0; }
+.results-toolbar #toggleAll { flex: none; }
+
 /* State lives on the card edge, not in a glow that shouts. */
 .card-scanning   { box-shadow: inset 2px 0 0 var(--color-accent); }
 .card-rescanning { box-shadow: inset 2px 0 0 #a67ce8; }
@@ -392,6 +408,8 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 
 /* --- nmap reports list -------------------------------------------------- */
 .nmap-list { display: flex; flex-direction: column; gap: 6px;
-             max-height: 34vh; overflow-y: auto; }
+             max-height: 240px; overflow-y: auto;
+             padding-right: 4px; }
 .nmap-entry { font-size: 12px; }
 .nmap-sort { width: auto; min-height: 26px; font-size: 11px; padding: 2px 6px; }
+.nmap-search { min-height: 28px; font-size: 12px; padding: 4px 8px; }

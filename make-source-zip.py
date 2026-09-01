@@ -38,6 +38,9 @@ ALLOW = [
     ("static", "**/*.woff"),
     ("static", "**/*.ttf"),
     ("static", "**/*.svg"),
+    # The interface logo and favicon — the app's own artwork, not client data,
+    # so exempt from the blanket .png ban below.
+    ("static/img", "*.png"),
     ("packaging", "*"),
     (".", "extract-design.py"),
     (".", "make-screenshots.py"),
@@ -106,11 +109,20 @@ def collect(include_legacy):
     return sorted({os.path.relpath(p, HERE) for p in found})
 
 
+# PNGs are forbidden because client screenshots are PNGs — except the app's own
+# interface art, permitted by exact path.
+ALLOWED_BINARIES = {
+    "static/img/logo.png", "static/img/logo-small.png", "static/img/favicon.png",
+}
+
+
 def check(paths):
     """Returns (errors, warnings). Errors block the build."""
     errors, warnings = [], []
     for rel in paths:
         name = os.path.basename(rel)
+        if rel in ALLOWED_BINARIES:
+            continue
         if name in FORBIDDEN_NAMES:
             errors.append(f"{rel}: excluded by name")
             continue
