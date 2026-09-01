@@ -43,3 +43,6 @@ venv/
 # Output written by other tools run from this directory. Named after live
 # hosts, so it is engagement data whatever produced it.
 reports/
+
+# Design scratch: static HTML snapshots of every view (see index.html).
+UI-Sample/
