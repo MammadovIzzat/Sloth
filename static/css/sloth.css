@@ -516,7 +516,7 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 .authv-host .dot2 { width:5px; height:5px; border-radius:50%; background:#3fb984; }
 .authv-body { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:28px 20px; }
 .authv-card { width:100%; max-width:352px; }
-.authv-logo { display:block; width:96px; height:96px; margin:0 auto 26px; }
+.authv-logo { display:block; width:144px; height:144px; margin:0 auto 26px; }
 .authv-foot { flex:none; display:flex; align-items:center; gap:8px; padding:10px 20px;
               border-top:1px solid var(--color-divider); background:color-mix(in srgb, var(--color-bg) 55%, #000); }
 .authv-foot span { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:rgba(233,233,237,.45); }
