@@ -17,7 +17,7 @@
                 <span style="font-size:13px; color:rgba(233,233,237,.45)">{{ sub }}</span>
             </div>
             {% if show_cmd %}
-            <div class="cmd" style="margin-top:9px">
+            <div class="cmd" style="margin-top:9px; max-width:100%; word-break:break-all">
                 <span class="dollar">$</span>
                 <span class="tool" style="color:{{ fmt['hue'] }}">{{ fmt['cmd_head'] }}</span>
                 <span class="muted" style="color:rgba(233,233,237,.72)">{{ cmd_rest }}</span>

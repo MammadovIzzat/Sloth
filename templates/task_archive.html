@@ -4,7 +4,8 @@
 {% block title %}{{ task['target'] }} · web archive{% endblock %}
 
 {% block content %}
-{{ tool.head(task, fmt, task['target'], 'every URL the archive has for this domain', '', show_cmd=False) }}
+{% set cdx = "'https://web.archive.org/cdx/search/cdx?url=*." ~ task['target'] ~ "/*&output=txt&fl=original&collapse=urlkey'" %}
+{{ tool.head(task, fmt, task['target'], 'every URL the archive has for this domain', cdx) }}
 {% if result and result['rows'] %}
 <div class="results-bar">
     <div class="csearch" style="flex:1 1 auto; max-width:380px">

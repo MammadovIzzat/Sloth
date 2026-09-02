@@ -37,7 +37,8 @@ TASK_FORMATS = [
         "hue": "#8ab2f5", "engine": "Wayback CDX",
         "blurb": "Every URL the Internet Archive ever saw for a domain, including the ones since deleted.",
         "coming_soon": False,
-        "cmd_head": "waybackurls", "cmd_rest": "acme.example",
+        "cmd_head": "curl -s",
+        "cmd_rest": "'https://web.archive.org/cdx/search/cdx?url=*.acme.example/*&output=txt&fl=original&collapse=urlkey'",
         "fields": [
             {"name": "target", "label": "Domain", "ph": "acme.example", "hint": "Subdomains and every path under them are included automatically.", "font": "mono", "span": "span 2"},
         ],
