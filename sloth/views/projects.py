@@ -54,6 +54,8 @@ def project_detail(project_id):
         "project.html",
         nav_section="projects",
         current_project_id=project_id,
+        current_project_name=project["name"],
+        sidebar_tasks=store.list_tasks(project_id),
         project=project,
         tasks=store.list_tasks(project_id),
         hosts=store.project_hosts(project_id),

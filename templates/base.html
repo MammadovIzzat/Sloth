@@ -13,11 +13,11 @@
 <body>
 
 {% if not current_user() %}
-    {# Signed out: split screen, form on the left. #}
+    {# Signed out: full-screen split, form on the left. #}
     <div class="auth">
         <div class="auth-form">
             <a href="{{ url_for('projects.index') }}" class="brand brand-lg">
-                <img class="brand-logo brand-logo-lg"
+                <img class="brand-logo brand-logo-lg" style="width:60px;height:60px"
                      src="{{ url_for('static', filename='img/logo.png') }}" alt="">
                 <span class="brand-word">sloth</span>
             </a>
@@ -30,62 +30,75 @@
         </div>
     </div>
 {% else %}
-<div class="shell">
+{% set running_jobs = (sidebar_projects or [])|sum(attribute='running_count') %}
+<div class="console">
 
-    <aside class="sidebar">
-        <a href="{{ url_for('projects.index') }}" class="brand">
-            <img class="brand-logo"
-                 src="{{ url_for('static', filename='img/logo-small.png') }}" alt="">
-            <span class="brand-word">sloth</span>
-        </a>
-
-        <nav class="nav nav-stack">
-            <a href="{{ url_for('projects.index') }}"
-               {% if nav_section == 'projects' %}aria-current="page"{% endif %}>
-                <i class="ph ph-folders"></i>Projects</a>
-            <a href="{{ url_for('reports.list_scans') }}"
-               {% if nav_section == 'scans' %}aria-current="page"{% endif %}>
-                <i class="ph ph-file-text"></i>Saved nmap scans</a>
-            <a href="{{ url_for('notifications.log') }}"
-               {% if nav_section == 'notifications' %}aria-current="page"{% endif %}>
-                <i class="ph ph-bell"></i>Notifications
-                <span id="notifyBadge" class="nav-badge {{ '' if unseen_notifications else 'hidden' }}"
-                      >{{ unseen_notifications }}</span></a>
-            <a href="{{ url_for('auth.account') }}"
-               {% if nav_section == 'account' %}aria-current="page"{% endif %}>
-                <i class="ph ph-user-circle"></i>Account</a>
-        </nav>
-
-        <div class="side-group">
-            <div class="side-head">
-                <h6>Projects</h6>
-                <a href="#" title="New project" data-dialog-open="dlg-project">
-                    <i class="ph ph-plus"></i></a>
-            </div>
-            <nav class="nav nav-stack">
-                {% for p in (sidebar_projects or []) %}
-                <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
-                   {% if p['id'] == current_project_id %}aria-current="page"{% endif %}
-                   class="side-project">
-                    {# A running scan pulses; anything else is a static dot. #}
-                    <span class="dot {{ 'dot-live' if p['running_count'] else '' }}"></span>
-                    <span class="ellipsis">{{ p['name'] }}</span>
-                </a>
-                {% endfor %}
-            </nav>
-        </div>
-
-        <div class="side-foot">
-            <a href="{{ url_for('auth.account') }}" class="side-user">
-                <i class="ph ph-user"></i>{{ current_user()['username'] }}</a>
+    {# ═══ icon rail ═══ #}
+    <div class="rail">
+        <a href="{{ url_for('projects.index') }}">
+            <img class="rail-logo" src="{{ url_for('static', filename='img/logo-small.png') }}" alt="sloth"></a>
+        <a href="{{ url_for('projects.index') }}" title="Projects"
+           class="rail-btn {{ 'on' if nav_section == 'projects' }}"><i class="ph ph-folders"></i></a>
+        <a href="{{ url_for('reports.list_scans') }}" title="Saved nmap scans"
+           class="rail-btn {{ 'on' if nav_section == 'scans' }}"><i class="ph ph-file-text"></i></a>
+        <a href="{{ url_for('notifications.log') }}" title="Notifications"
+           class="rail-btn {{ 'on' if nav_section == 'notifications' }}">
+            <i class="ph ph-bell"></i>
+            <span id="notifyBadge" class="rail-badge {{ '' if unseen_notifications else 'hidden' }}"
+                  >{{ unseen_notifications }}</span></a>
+        <div class="rail-foot">
+            <a href="{{ url_for('auth.account') }}" title="{{ current_user()['username'] }}"
+               class="rail-avatar {{ 'on' if nav_section == 'account' }}"
+               >{{ current_user()['username'][:2]|lower }}</a>
             <form method="post" action="{{ url_for('auth.logout') }}">
                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <button title="Sign out" class="icon-link"><i class="ph ph-sign-out"></i></button>
+                <button title="Sign out" class="rail-signout"><i class="ph ph-sign-out"></i></button>
             </form>
         </div>
-    </aside>
+    </div>
 
-    <main class="main">
+    {# ═══ context column ═══ #}
+    <div class="ctx">
+        <div class="ctx-top">
+            <a href="{{ url_for('projects.index') }}" class="ctx-brand">sloth</a>
+            <span class="ctx-ver">v{{ app_version }}</span>
+        </div>
+        <div class="ctx-body">
+            <div class="ctx-head">
+                <span>Projects</span>
+                <a href="#" title="New project" data-dialog-open="dlg-project"><i class="ph ph-plus"></i></a>
+            </div>
+            {% for p in (sidebar_projects or []) %}
+            <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
+               class="ctx-proj {{ 'on' if p['id'] == current_project_id }}">
+                <span class="dot2 {{ 'live' if p['running_count'] }}"></span>
+                <span class="name">{{ p['name'] }}</span>
+                <span class="n">{{ p['task_count'] }}</span>
+            </a>
+            {% endfor %}
+
+            {% if sidebar_tasks %}
+            <div class="ctx-tree">
+                <div class="ctx-tree-h ellipsis">{{ current_project_name }}</div>
+                {% for t in sidebar_tasks %}
+                <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}"
+                   class="ctx-task {{ 'on' if t['id'] == current_task_id }}">
+                    <div class="t">{{ t['target'] }}</div>
+                    <div class="m">{{ t['host_count'] }} hosts · {{ t['finding_count'] }} ports</div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="ctx-foot">
+            <span class="dot2"></span>
+            <span>scanner online</span>
+            <span class="mono" style="margin-left:auto">{{ running_jobs }} job{{ '' if running_jobs == 1 else 's' }}</span>
+        </div>
+    </div>
+
+    {# ═══ main ═══ #}
+    <main class="view">
         {% include "_flash.html" %}
         {% block content %}{% endblock %}
     </main>

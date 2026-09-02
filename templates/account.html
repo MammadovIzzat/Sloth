@@ -2,74 +2,75 @@
 {% block title %}Account · Sloth{% endblock %}
 
 {% block content %}
-<div style="max-width:640px">
-    <div class="page-head">
-        <div>
-            <h3>{{ user['username'] }}</h3>
-            <p class="sub">
-                Created {{ user['created_at'] }} · last sign-in {{ user['last_login'] or '—' }}
-            </p>
-        </div>
-    </div>
+<div class="vhead" style="padding-bottom:16px">
+    <h1 class="h1">{{ user['username'] }}</h1>
+    <p class="subline">Created {{ user['created_at'] }} · last sign-in {{ user['last_login'] or '—' }}</p>
+</div>
 
-    <div class="card elev-sm" style="padding:var(--space-6);margin-bottom:var(--space-4)">
-        <h6 class="card-kicker" style="margin:0 0 var(--space-4)">Change password</h6>
-        <form method="post" action="{{ url_for('auth.change_password') }}">
-            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-            <div class="field">
-                <label for="ac-cur">Current password</label>
-                <input id="ac-cur" class="input" name="current_password" type="password"
-                       autocomplete="current-password" required>
-            </div>
-            <div class="grid-2" style="margin-top:var(--space-4)">
-                <div class="field">
-                    <label for="ac-new">New password</label>
-                    <input id="ac-new" class="input" name="new_password" type="password"
-                           autocomplete="new-password" minlength="{{ min_length }}" required>
-                </div>
-                <div class="field">
-                    <label for="ac-conf">Confirm</label>
-                    <input id="ac-conf" class="input" name="confirm" type="password"
-                           autocomplete="new-password" minlength="{{ min_length }}" required>
-                </div>
-            </div>
-            <button class="btn btn-secondary" style="margin-top:var(--space-4)">Update password</button>
-        </form>
-    </div>
-
-    <div class="card elev-sm" style="padding:var(--space-6)">
-        <h6 class="card-kicker" style="margin:0 0 var(--space-2)">API token</h6>
-        <p class="sub" style="margin-bottom:var(--space-4);line-height:1.7">
-            For curl and scripts. Send it as
-            <code>Authorization: Bearer &lt;token&gt;</code> or
-            <code>X-API-Token: &lt;token&gt;</code>. Only the hash is stored, so a
-            token is shown once and cannot be recovered — generating a new one
-            replaces the old.
-        </p>
-        <p style="margin-bottom:var(--space-4)">
-            {% if has_token %}
-            <span class="tag tag-ok">a token is active</span>
-            {% else %}
-            <span class="tag tag-neutral">no token issued</span>
-            {% endif %}
-        </p>
-        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
-            <form method="post" action="{{ url_for('auth.rotate_token') }}">
+<div class="view-scroll" style="padding:0 28px 40px">
+    <div style="max-width:660px">
+        <div style="padding:22px 0; border-bottom:1px solid var(--color-divider)">
+            <div class="seclabel" style="margin-bottom:14px">Change password</div>
+            <form method="post" action="{{ url_for('auth.change_password') }}"
+                  style="display:flex; flex-direction:column; gap:11px; max-width:420px">
                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <button class="btn btn-primary">
-                    <i class="ph ph-key"></i>{{ 'Regenerate' if has_token else 'Generate' }} token</button>
+                <div>
+                    <label class="cfield-label" for="ac-cur">Current password</label>
+                    <input id="ac-cur" class="cinput" name="current_password" type="password" autocomplete="current-password" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px">
+                    <div>
+                        <label class="cfield-label" for="ac-new">New password</label>
+                        <input id="ac-new" class="cinput" name="new_password" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
+                    </div>
+                    <div>
+                        <label class="cfield-label" for="ac-conf">Confirm</label>
+                        <input id="ac-conf" class="cinput" name="confirm" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
+                    </div>
+                </div>
+                <div style="font-size:11.5px; color:rgba(233,233,237,.35)">Minimum {{ min_length }} characters.</div>
+                <button class="cbtn" style="align-self:flex-start; margin-top:2px">Update password</button>
             </form>
-            {% if has_token %}
-            <form method="post" action="{{ url_for('auth.rotate_token') }}">
-                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <input type="hidden" name="revoke" value="1">
-                <button class="btn btn-ghost">Revoke</button>
-            </form>
-            {% endif %}
         </div>
-        <div class="card" style="padding:var(--space-3);margin-top:var(--space-4);
-             background:color-mix(in srgb, var(--color-text) 4%, transparent)">
-            <pre class="raw">curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:9998/tasks/&lt;id&gt;/state</pre>
+
+        <div style="padding:22px 0">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+                <span class="seclabel">API token</span>
+                {% if has_token %}
+                <span class="badge-state" style="color:#7fd8b0; background:color-mix(in srgb,#3fb984 14%,transparent)">a token is active</span>
+                {% else %}
+                <span class="badge-state" style="color:rgba(233,233,237,.6); background:rgba(233,233,237,.09)">no token issued</span>
+                {% endif %}
+            </div>
+            <p style="margin:0 0 14px; font-size:12.5px; line-height:1.75; color:rgba(233,233,237,.5); max-width:56ch">
+                For curl and scripts. Only the hash is stored, so a token is shown once and cannot be
+                recovered — generating a new one replaces the old.</p>
+            <div style="display:flex; gap:16px; margin-bottom:16px">
+                <div style="flex:1; padding:8px 11px; border-radius:6px; background:color-mix(in srgb, var(--color-bg) 55%, #000); border:1px solid var(--color-divider)">
+                    <div style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(233,233,237,.28); margin-bottom:4px">Header</div>
+                    <span class="mono" style="font-size:11.5px; color:rgba(233,233,237,.7)">Authorization: Bearer &lt;token&gt;</span>
+                </div>
+                <div style="flex:1; padding:8px 11px; border-radius:6px; background:color-mix(in srgb, var(--color-bg) 55%, #000); border:1px solid var(--color-divider)">
+                    <div style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(233,233,237,.28); margin-bottom:4px">or</div>
+                    <span class="mono" style="font-size:11.5px; color:rgba(233,233,237,.7)">X-API-Token: &lt;token&gt;</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+                <form method="post" action="{{ url_for('auth.rotate_token') }}">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button class="cbtn cbtn-accent"><i class="ph ph-key"></i>{{ 'Regenerate' if has_token else 'Generate' }} token</button>
+                </form>
+                {% if has_token %}
+                <form method="post" action="{{ url_for('auth.rotate_token') }}">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <input type="hidden" name="revoke" value="1">
+                    <button class="cbtn">Revoke</button>
+                </form>
+                {% endif %}
+            </div>
+            <pre class="console-log" style="margin:16px 0 0; padding:11px 13px; border-radius:6px;
+                 background:color-mix(in srgb, var(--color-bg) 55%, #000); border:1px solid var(--color-divider);
+                 font-size:11px; color:rgba(233,233,237,.45)">curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:9998/tasks/&lt;id&gt;/state</pre>
         </div>
     </div>
 </div>

@@ -2,69 +2,61 @@
 {% block title %}Nmap {{ scan['ip'] }} · Sloth{% endblock %}
 
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
+<div class="vhead" style="padding-bottom:16px">
+    <div class="crumb">
+        <a href="{{ url_for('reports.list_scans') }}">Saved nmap report</a>
+        <span class="sep">/</span>
+        <span class="mono">scan {{ scan['id'] }}</span>
+    </div>
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap">
         <div>
-            <p class="card-kicker" style="margin:0 0 6px">Saved nmap report</p>
-            <h3 class="host-ip" style="font-size:22px">{{ scan['ip'] }}</h3>
-            <p class="sub" style="margin-top:6px">
-                {{ scan['created_at'] }} · {{ scan['tool'] }} · scan {{ scan['id'] }}
-            </p>
+            <h1 class="h1-mono" style="font-size:24px">{{ scan['ip'] }}</h1>
+            <p class="subline" style="font-size:12.5px">
+                {{ scan['created_at'] }} · <span class="mono" style="color:var(--color-accent-300)">{{ scan['tool'] }}</span>
+                · {{ ports|length }} port{{ '' if ports|length == 1 else 's' }} open</p>
         </div>
-        <div class="page-actions">
+        <div style="display:flex; gap:8px">
             {% if scan['task_id'] %}
-            <a class="btn btn-ghost" href="{{ url_for('scan.task_detail', task_id=scan['task_id']) }}">
-                <i class="ph ph-arrow-left"></i>Back to task</a>
+            <a class="cbtn" href="{{ url_for('scan.task_detail', task_id=scan['task_id']) }}"><i class="ph ph-arrow-left"></i>Back to task</a>
             {% endif %}
-            <a class="btn btn-ghost" href="{{ url_for('reports.list_scans') }}">All saved scans</a>
+            <a class="cbtn" href="{{ url_for('reports.list_scans') }}">All saved scans</a>
         </div>
     </div>
+</div>
 
-    <div class="card elev-sm" style="padding:var(--space-2) var(--space-4) var(--space-4);
-         margin-bottom:var(--space-6);overflow-x:auto">
-        <table class="table" style="min-width:420px">
-            <thead><tr>
-                <th style="width:110px">Port</th><th style="width:110px">State</th><th>Service</th>
-            </tr></thead>
-            <tbody>
-            {% for p in ports %}
-            <tr>
-                <td class="host-ip">{{ p['port'] }}/{{ p['proto'] }}</td>
-                <td><span class="tag tag-neutral {{ 'port-filtered' if not p['state'].startswith('open') }}">{{ p['state'] }}</span></td>
-                <td>{{ p['service'] or '—' }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="3"><span class="host-empty">No open or filtered ports parsed.</span></td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="view-scroll">
+    <div class="colhead"><span style="width:100px">Port</span><span style="width:90px">State</span><span style="flex:1">Service</span></div>
+    {% for p in ports %}
+    {% set fam = port_family(p['port'], p['service']) %}
+    <div class="lrow" style="padding:11px 28px; border-left:2px solid {{ fam['hue'] }}">
+        <span class="mono" style="width:100px; font-size:12.5px; color:{{ fam['hue'] }}">{{ p['port'] }}/{{ p['proto'] }}</span>
+        <span style="width:90px"><span class="badge-state" style="color:rgba(233,233,237,.7); background:rgba(233,233,237,.09)">{{ p['state'] }}</span></span>
+        <span style="flex:1; min-width:0; font-size:12.5px; color:rgba(233,233,237,.75)">{{ p['service'] or '—' }}</span>
     </div>
+    {% else %}
+    <div style="padding:24px 28px"><span class="host-empty">No open or filtered ports parsed.</span></div>
+    {% endfor %}
 
     {% if shots %}
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">Web screenshots</h6>
-    <div class="shots" style="margin-bottom:var(--space-6)">
+    <div class="seclabel" style="padding:20px 28px 7px">Web screenshots</div>
+    <div class="shots" style="padding:0 28px 8px">
         {% for s in shots %}
         <div class="card elev-sm" style="padding:var(--space-2)">
-            <a href="{{ s['url'] }}" target="_blank" rel="noreferrer"
-               class="ellipsis" style="display:block;font-size:12px;padding:4px 6px 8px">{{ s['url'] }}</a>
+            <a href="{{ s['url'] }}" target="_blank" rel="noreferrer" class="ellipsis"
+               style="display:block; font-size:12px; padding:4px 6px 8px">{{ s['url'] }}</a>
             <a href="{{ url_for('reports.screenshot', fname=s['file']) }}" target="_blank">
-                <img src="{{ url_for('reports.screenshot', fname=s['file']) }}"
-                     alt="screenshot of {{ s['url'] }}">
-            </a>
+                <img src="{{ url_for('reports.screenshot', fname=s['file']) }}" alt="screenshot of {{ s['url'] }}"></a>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">Command</h6>
-    <div class="card elev-sm" style="padding:var(--space-4);margin-bottom:var(--space-6)">
-        <pre class="raw" style="color:var(--color-accent-2)">{{ scan['command'] }}</pre>
-    </div>
+    <div class="seclabel" style="padding:20px 28px 7px">Command</div>
+    <div class="codeblock" style="margin:0 28px"><span class="dollar">$</span>{{ scan['command'] }}</div>
 
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">
-        Full nmap output (incl. script results)</h6>
-    <div class="card elev-sm" style="padding:var(--space-4)">
-        <pre class="raw">{{ scan['raw_output'] }}</pre>
-    </div>
+    <div class="seclabel" style="padding:20px 28px 7px">Full nmap output — incl. script results</div>
+    <pre class="console-log" style="margin:0 28px 40px; padding:12px 14px; border-radius:6px;
+         background:color-mix(in srgb, var(--color-bg) 55%, #000); border:1px solid var(--color-divider);
+         font-size:11px; color:rgba(233,233,237,.5)">{{ scan['raw_output'] }}</pre>
 </div>
 {% endblock %}

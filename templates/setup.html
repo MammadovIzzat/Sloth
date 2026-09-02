@@ -2,31 +2,28 @@
 {% block title %}First-run setup · Sloth{% endblock %}
 
 {% block auth_content %}
-<div style="max-width:340px">
-    <h3 style="margin:0 0 6px">Create your account</h3>
-    <p class="sub" style="margin-bottom:26px;line-height:1.7;max-width:44ch">
-        No account exists yet. Create one now — there is deliberately no default
-        password, so nothing is left open by accident.
-    </p>
+<div style="max-width:360px">
+    <h1 class="h1" style="font-size:25px; margin-bottom:6px">Create your account</h1>
+    <p class="subline" style="margin:0 0 26px; line-height:1.7; max-width:44ch">
+        No account exists yet. Create one now — there is deliberately no default password,
+        so nothing is left open by accident.</p>
 
-    <form method="post" style="display:flex;flex-direction:column;gap:var(--space-4)">
+    <form method="post" style="display:flex; flex-direction:column; gap:14px">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <div class="field">
-            <label for="su-u">Username</label>
-            <input id="su-u" class="input" name="username" autocomplete="username" autofocus required>
+        <div>
+            <label class="cfield-label" for="su-u">Username</label>
+            <input id="su-u" class="cinput" name="username" autocomplete="username" autofocus required>
         </div>
-        <div class="field">
-            <label for="su-p">Password</label>
-            <input id="su-p" class="input" name="password" type="password"
-                   autocomplete="new-password" minlength="{{ min_length }}" required>
-            <p class="hint">At least {{ min_length }} characters. Stored as a scrypt hash.</p>
+        <div>
+            <label class="cfield-label" for="su-p">Password</label>
+            <input id="su-p" class="cinput" name="password" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
+            <div style="margin-top:6px; font-size:11.5px; color:rgba(233,233,237,.38)">At least {{ min_length }} characters. Stored as a scrypt hash.</div>
         </div>
-        <div class="field">
-            <label for="su-c">Confirm password</label>
-            <input id="su-c" class="input" name="confirm" type="password"
-                   autocomplete="new-password" minlength="{{ min_length }}" required>
+        <div>
+            <label class="cfield-label" for="su-c">Confirm password</label>
+            <input id="su-c" class="cinput" name="confirm" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
         </div>
-        <button class="btn btn-primary btn-block" type="submit">Create account</button>
+        <button class="cbtn cbtn-primary" type="submit" style="justify-content:center; margin-top:4px; padding:9px">Create account</button>
     </form>
 </div>
 {% endblock %}

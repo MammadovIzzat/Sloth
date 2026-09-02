@@ -6,114 +6,112 @@
                   'interrupted':'tag-neutral', 'pending':'tag-outline'} %}
 
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
-        <div>
-            <h3>{{ project['name'] }}</h3>
-            <p class="sub">
-                {% if project['client'] %}{{ project['client'] }} · {% endif %}
-                created {{ project['created_at'] }}
-            </p>
+{% set surface = surface_summary(hosts) %}
+<div class="vhead">
+    <div class="crumb">
+        <a href="{{ url_for('projects.index') }}">Projects</a>
+        <span class="sep">/</span>
+        <span>{{ project['name'] }}</span>
+    </div>
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap">
+        <div style="min-width:0">
+            <h1 class="h1">{{ project['name'] }}</h1>
+            <p class="subline">
+                {% if project['client'] %}{{ project['client'] }} · {% endif %}created {{ project['created_at'] }}</p>
             {% if project['description'] %}
-            <p class="sub" style="margin-top:8px;max-width:60ch">{{ project['description'] }}</p>
+            <p class="subline" style="margin-top:7px; color:rgba(233,233,237,.55); max-width:60ch">{{ project['description'] }}</p>
             {% endif %}
         </div>
-        <div class="page-actions">
-            <button class="btn btn-ghost" data-dialog-open="dlg-export">
-                <i class="ph ph-download-simple"></i>Export</button>
-            <button class="btn btn-ghost" data-dialog-open="dlg-import">
-                <i class="ph ph-upload-simple"></i>Import</button>
-            <button class="btn btn-ghost" data-dialog-open="dlg-settings">
-                <i class="ph ph-gear"></i>Settings</button>
-            <button class="btn btn-primary" data-dialog-open="dlg-task">
-                <i class="ph ph-plus"></i>New scan task</button>
+        <div style="display:flex; gap:8px; padding-bottom:2px; flex-wrap:wrap; justify-content:flex-end">
+            <button class="cbtn" data-dialog-open="dlg-export"><i class="ph ph-download-simple"></i>Export</button>
+            <button class="cbtn" data-dialog-open="dlg-import"><i class="ph ph-upload-simple"></i>Import</button>
+            <button class="cbtn cbtn-icon" data-dialog-open="dlg-settings" title="Settings"><i class="ph ph-gear" style="font-size:16px"></i></button>
+            <button class="cbtn cbtn-primary" data-dialog-open="dlg-task"><i class="ph ph-plus"></i>New scan task</button>
         </div>
     </div>
-
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">Scan tasks</h6>
-    <div class="stack" style="margin-bottom:var(--space-8)">
-        {% for t in tasks %}
-        <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}"
-           class="card elev-sm {{ 'card-scanning' if t['status'] == 'running' }}"
-           style="padding:var(--space-4) var(--space-6);flex-direction:row;
-                  align-items:center;justify-content:space-between;gap:var(--space-6);
-                  color:var(--color-text)">
-            <div style="min-width:0">
-                <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-                    <span class="card-title" style="font-size:14px">{{ t['name'] }}</span>
-                    <span class="tag {{ tag_for.get(t['status'], 'tag-neutral') }}">{{ t['status'] }}</span>
-                </div>
-                <p class="card-meta" style="margin:6px 0 0">
-                    {{ t['engine'] if t['scan_type'] == 'full'
-                       else {'quick':'nmap quick','discovery':'discovery'}.get(t['scan_type'], t['scan_type']) }}
-                    · {{ t['target'] }}
-                    {% if t['discovery'] %} · 🔎 {{ t['discovery'] }}{% endif %}
-                    {% if t['tcp_ports'] %} · TCP {{ t['tcp_ports'] }}{% endif %}
-                    {% if t['udp_ports'] %} · UDP {{ t['udp_ports'] }}{% endif %}
-                    {% if t['top_ports'] %} · top {{ t['top_ports'] }}{% endif %}
-                </p>
-                {% if t['error'] %}
-                <p class="card-meta" style="margin:6px 0 0;color:#ffb4b6">{{ t['error'] }}</p>
-                {% endif %}
-            </div>
-            <div style="text-align:right;flex:none;font-size:12px;line-height:1.8;
-                        color:color-mix(in srgb, var(--color-text) 55%, transparent)">
-                <div><b style="color:var(--color-text)">{{ t['host_count'] }}</b> hosts</div>
-                <div><b style="color:var(--color-text)">{{ t['finding_count'] }}</b> ports</div>
-            </div>
-        </a>
-        {% else %}
-        <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
-            <p class="sub">No tasks yet. Add one to start scanning.</p>
+    {% if surface %}
+    <div class="band">
+        {% for s in surface %}
+        <div class="band-cell" style="border-bottom-color:{{ s['hue'] }}">
+            <div class="band-n" style="color:{{ s['hue'] }}">{{ s['n'] }}</div>
+            <div class="band-label">{{ s['label'] }}</div>
+            <div class="band-sub">{{ s['port'] }}/{{ s['proto'] }}</div>
         </div>
         {% endfor %}
     </div>
+    {% endif %}
+</div>
+
+<div class="view-scroll" style="padding-bottom:40px">
+    <div style="display:flex; align-items:baseline; gap:10px; padding:14px 28px 9px; border-bottom:1px solid var(--color-divider)">
+        <span class="seclabel">Scan tasks</span>
+        <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ tasks|length }}</span>
+    </div>
+    {% for t in tasks %}
+    <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}" class="lrow click"
+       style="padding:14px 28px; gap:20px; align-items:center">
+        <div style="flex:1; min-width:0">
+            <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap">
+                <span class="mono" style="font-size:14px">{{ t['target'] }}</span>
+                <span class="tag {{ tag_for.get(t['status'], 'tag-neutral') }}">{{ t['status'] }}</span>
+            </div>
+            <div class="mono" style="margin-top:5px; font-size:11.5px; color:rgba(233,233,237,.38)">
+                {{ t['engine'] if t['scan_type'] == 'full'
+                   else {'quick':'nmap quick','discovery':'discovery'}.get(t['scan_type'], t['scan_type']) }}
+                {%- if t['discovery'] %} · 🔎 {{ t['discovery'] }}{% endif %}
+                {%- if t['tcp_ports'] %} · TCP {{ t['tcp_ports'] }}{% endif %}
+                {%- if t['udp_ports'] %} · UDP {{ t['udp_ports'] }}{% endif %}
+                {%- if t['top_ports'] %} · top {{ t['top_ports'] }}{% endif %}
+            </div>
+            {% if t['error'] %}
+            <div style="margin-top:4px; font-size:11.5px; color:#ffb4b6">{{ t['error'] }}</div>
+            {% endif %}
+        </div>
+        <div class="mono" style="flex:none; text-align:right; font-size:13px; line-height:1.6;
+             color:{{ 'var(--color-text)' if t['finding_count'] else 'rgba(233,233,237,.3)' }}">
+            <div>{{ t['host_count'] }} <span style="font-family:var(--font-body); font-size:11px; color:rgba(233,233,237,.32)">hosts</span></div>
+            <div>{{ t['finding_count'] }} <span style="font-family:var(--font-body); font-size:11px; color:rgba(233,233,237,.32)">ports</span></div>
+        </div>
+    </a>
+    {% else %}
+    <div style="padding:40px 28px; text-align:center"><p class="subline">No tasks yet. Add one to start scanning.</p></div>
+    {% endfor %}
 
     {% if hosts %}
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">
-        All hosts in this project ({{ hosts|length }})</h6>
-    <div class="card elev-sm" style="padding:var(--space-2) var(--space-4) var(--space-4);
-         margin-bottom:var(--space-8);overflow-x:auto">
-        <table class="table" style="min-width:420px">
-            <thead><tr><th style="width:150px">Host</th><th>Open ports and services</th></tr></thead>
-            <tbody>
-            {% for h in hosts %}
-            <tr>
-                <td class="host-ip">{{ h['ip'] }}</td>
-                <td>
-                    <div class="ports">
-                    {% for p in h['ports'] %}
-                        <span class="tag tag-neutral port {{ 'port-filtered' if not p['state'].startswith('open') }}"
-                              title="{{ p['state'] }} · found by {{ p['tasks']|join(', ') }}">
-                            <span class="port-num">{{ p['port'] }}/{{ p['proto'] }}</span>
-                            {% if p['service'] %}<span class="port-svc">{{ p['service'] }}</span>{% endif %}
-                        </span>
-                    {% else %}
-                        <span class="host-empty">host is up — no open ports recorded</span>
-                    {% endfor %}
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    <div style="display:flex; align-items:baseline; gap:10px; padding:22px 28px 9px; border-bottom:1px solid var(--color-divider)">
+        <span class="seclabel">All hosts in this project</span>
+        <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ hosts|length }}</span>
     </div>
+    {% for h in hosts %}
+    <div class="lrow" style="padding:9px 28px">
+        <span class="lrow-ip" style="flex:none; width:112px">{{ h['ip'] }}</span>
+        <div class="lrow-ports">
+            {% for p in h['ports'] %}
+            {% set fam = port_family(p['port'], p['service']) %}
+            <span class="pill" style="color:{{ fam['hue'] }}; background:{{ fam['bg'] }}{{ '; opacity:.6' if not p['state'].startswith('open') }}"
+                  title="{{ p['state'] }} · {{ p['tasks']|join(', ') }}">
+                <b>{{ p['port'] }}</b><span class="svc">{{ p['service'] or p['proto'] }}</span></span>
+            {% else %}
+            <span class="host-empty">host is up — no open ports recorded</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
     {% endif %}
 
     {% if nmap_scans %}
-    <h6 class="card-kicker" style="margin:0 0 var(--space-3)">Nmap reports</h6>
-    <div class="stack">
-        {% for s in nmap_scans %}
-        <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}"
-           class="card elev-sm" style="padding:12px var(--space-4);flex-direction:row;
-                  align-items:center;gap:10px;color:var(--color-text);font-size:13px">
-            <i class="ph ph-file-text" style="color:var(--color-accent)"></i>
-            <span class="host-ip">{{ s['ip'] }}</span>
-            <span class="card-meta">{{ s['created_at'] }} · {{ s['tool'] }}
-                {% if s['task_name'] %}· {{ s['task_name'] }}{% endif %}</span>
-        </a>
-        {% endfor %}
+    <div style="display:flex; align-items:baseline; gap:10px; padding:22px 28px 9px; border-bottom:1px solid var(--color-divider)">
+        <span class="seclabel">Nmap reports</span>
+        <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ nmap_scans|length }}</span>
     </div>
+    {% for s in nmap_scans %}
+    <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}" class="lrow click" style="padding:11px 28px">
+        <span class="lrow-ip" style="flex:none; width:112px; color:var(--color-accent-200)">{{ s['ip'] }}</span>
+        <span style="flex:1; min-width:0; font-size:12.5px; color:rgba(233,233,237,.55)">
+            {{ s['created_at'] }}{% if s['task_name'] %} · {{ s['task_name'] }}{% endif %}</span>
+        <span class="mono" style="flex:none; font-size:11.5px; color:var(--color-accent-300)">{{ s['tool'] }}</span>
+    </a>
+    {% endfor %}
     {% endif %}
 </div>
 {% endblock %}

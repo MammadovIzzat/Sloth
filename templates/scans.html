@@ -2,78 +2,55 @@
 {% block title %}Saved nmap scans · Sloth{% endblock %}
 
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
-        <div>
-            <h3>Saved nmap scans</h3>
-            <p class="sub">
-                {% if search or project_id %}
-                    {{ total }} of {{ grand_total }} report(s) match.
-                {% else %}
-                    {{ scans|length }}{% if truncated %} of {{ total }}{% endif %} report(s),
-                    newest first.
-                {% endif %}
-            </p>
-        </div>
-        {% if truncated %}
-        <div class="page-actions">
-            <a class="btn btn-ghost"
-               href="{{ url_for('reports.list_scans', all=1, q=search, project=project_id) }}">
-                Show all {{ total }}</a>
-        </div>
-        {% endif %}
+<form method="get" action="{{ url_for('reports.list_scans') }}" class="vhead"
+      style="padding-bottom:16px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap">
+    <div>
+        <h1 class="h1">Saved nmap scans</h1>
+        <p class="subline">
+            {% if search or project_id %}{{ total }} of {{ grand_total }} report{{ '' if grand_total == 1 else 's' }} match.
+            {% else %}{{ scans|length }}{% if truncated %} of {{ total }}{% endif %} report{{ '' if total == 1 else 's' }}, newest first.{% endif %}
+        </p>
     </div>
-
-    <form method="get" action="{{ url_for('reports.list_scans') }}"
-          style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;
-                 margin-bottom:var(--space-4)">
-        <input class="input" type="search" name="q" value="{{ search }}"
-               placeholder="Search by address, tool, task or project…"
-               autocomplete="off" style="flex:1 1 260px;min-width:0">
-        <select class="input" name="project" onchange="this.form.submit()"
-                style="flex:0 1 240px">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+        <div class="csearch" style="width:270px">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="search" name="q" value="{{ search }}" autocomplete="off"
+                   placeholder="address, tool, task or project">
+        </div>
+        <select class="cinput" name="project" onchange="this.form.submit()" style="width:auto; font-size:12.5px; padding:6px 8px">
             <option value="">All projects</option>
             {% for p in projects %}
             <option value="{{ p['id'] }}" {{ 'selected' if p['id'] == project_id }}>{{ p['name'] }}</option>
             {% endfor %}
         </select>
-        <button class="btn btn-secondary" type="submit">Search</button>
-        {% if search or project_id %}
-        <a class="btn btn-ghost" href="{{ url_for('reports.list_scans') }}">Clear</a>
+        <button class="cbtn" type="submit">Search</button>
+        {% if search or project_id %}<a class="cbtn" href="{{ url_for('reports.list_scans') }}">Clear</a>{% endif %}
+        {% if truncated %}
+        <a class="cbtn" href="{{ url_for('reports.list_scans', all=1, q=search, project=project_id) }}">Show all {{ total }}</a>
         {% endif %}
-    </form>
-
-    {% if scans %}
-    <div class="card elev-sm" style="padding:var(--space-2) var(--space-4) var(--space-4);
-         overflow-x:auto">
-        <table class="table" style="min-width:520px">
-            <thead><tr>
-                <th style="width:130px">Host</th><th style="width:160px">When</th>
-                <th>Project / task</th><th style="width:110px">Tool</th>
-            </tr></thead>
-            <tbody>
-            {% for s in scans %}
-            <tr>
-                <td><a class="host-ip" href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}">{{ s['ip'] }}</a></td>
-                <td class="cell-muted">{{ s['created_at'] }}</td>
-                <td class="cell-muted">
-                    {{ s['project_name'] or '—' }}{% if s['task_name'] %} / {{ s['task_name'] }}{% endif %}
-                </td>
-                <td class="cell-muted">{{ s['tool'] }}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
     </div>
+</form>
+
+<div class="view-scroll">
+    {% if scans %}
+    <div class="colhead" style="gap:16px">
+        <span style="width:110px">Host</span><span style="width:150px">When</span>
+        <span style="flex:1">Project / task</span><span style="width:110px">Tool</span>
+    </div>
+    {% for s in scans %}
+    <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}" class="lrow click" style="gap:16px; padding:11px 28px">
+        <span class="mono" style="width:110px; font-size:13.5px; color:var(--color-accent-200)">{{ s['ip'] }}</span>
+        <span class="mono" style="width:150px; font-size:11.5px; color:rgba(233,233,237,.4)">{{ s['created_at'] }}</span>
+        <span style="flex:1; min-width:0; font-size:12.5px; color:rgba(233,233,237,.55); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+            {{ s['project_name'] or '—' }}{% if s['task_name'] %} / {{ s['task_name'] }}{% endif %}</span>
+        <span class="mono" style="width:110px; font-size:11.5px; color:var(--color-accent-300)">{{ s['tool'] }}</span>
+    </a>
+    {% endfor %}
     {% else %}
-    <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
-        <p class="sub">
-            {% if grand_total %}
-                Nothing matches that. Try a different address, tool or project.
-            {% else %}
-                No saved nmap scans yet. Rescan a host from a task to create one.
-            {% endif %}
-        </p>
+    <div style="padding:60px 28px; text-align:center">
+        <p class="subline">
+            {% if grand_total %}Nothing matches that. Try a different address, tool or project.
+            {% else %}No saved nmap scans yet. Rescan a host from a task to create one.{% endif %}</p>
     </div>
     {% endif %}
 </div>

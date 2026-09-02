@@ -1,107 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Projects · Sloth{% endblock %}
 
+{% macro num(v) %}{{ v }}{% endmacro %}
+
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
+{% set running_jobs = (sidebar_projects or [])|sum(attribute='running_count') %}
+<div class="vhead" style="padding-bottom:0">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap">
         <div>
-            <h3>Projects</h3>
-            <p class="sub">Every scan belongs to a project. Ad-hoc runs land in Quick scans.</p>
+            <h1 class="h1">Projects</h1>
+            <p class="subline">{{ projects|length }} engagement{{ '' if projects|length == 1 else 's' }}
+               · {{ running_jobs }} running job{{ '' if running_jobs == 1 else 's' }}
+               · every scan belongs to a project</p>
         </div>
-        <div class="page-actions">
-            {% if show == 'active' and archived_count %}
-            <a class="btn btn-ghost" href="{{ url_for('projects.index', show='all') }}">
-                <i class="ph ph-archive"></i>Show {{ archived_count }} archived</a>
-            {% elif show != 'active' %}
-            <a class="btn btn-ghost" href="{{ url_for('projects.index') }}">
-                <i class="ph ph-archive"></i>Hide archived</a>
-            {% endif %}
-            <button class="btn btn-ghost" data-dialog-open="dlg-import">
-                <i class="ph ph-upload-simple"></i>Import</button>
-            <button class="btn btn-secondary" data-dialog-open="dlg-quick">
-                <i class="ph ph-lightning"></i>Quick scan</button>
-            <button class="btn btn-primary" data-dialog-open="dlg-project">
-                <i class="ph ph-plus"></i>New project</button>
+        <div style="display:flex; gap:8px; padding-bottom:2px">
+            <button class="cbtn" data-dialog-open="dlg-import"><i class="ph ph-upload-simple"></i>Import</button>
+            <button class="cbtn cbtn-primary" data-dialog-open="dlg-quick"><i class="ph ph-lightning"></i>Quick scan</button>
+            <button class="cbtn cbtn-primary" data-dialog-open="dlg-project"><i class="ph ph-plus"></i>New project</button>
         </div>
     </div>
-
-    {% if active_task %}
-    <a class="card elev-sm" style="padding:14px var(--space-6);margin-bottom:var(--space-6);
-       display:flex;align-items:center;gap:10px;color:var(--color-text)"
-       href="{{ url_for('scan.task_detail', task_id=active_task) }}">
-        <span class="dot dot-live"></span>
-        <span style="font-size:13px">A scan is running — open it</span>
-    </a>
-    {% endif %}
-
-    {% if projects|length > 3 %}
-    <div class="field" style="margin-bottom:var(--space-4)">
-        <input id="projectSearch" class="input" type="search" autocomplete="off"
-               placeholder="Search projects by name, client or description…">
-    </div>
-    {% endif %}
-
-    <div class="stack" id="projectList">
-        {% for p in projects %}
-        <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}"
-           class="card elev-sm project-row"
-           data-search="{{ (p['name'] ~ ' ' ~ (p['client'] or '') ~ ' ' ~ (p['description'] or ''))|lower }}"
-           style="padding:var(--space-6);flex-direction:row;align-items:flex-start;
-                  justify-content:space-between;gap:var(--space-8);color:var(--color-text)">
-            <div style="min-width:0">
-                <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-                    <span class="card-title">{{ p['name'] }}</span>
-                    {% if p['running_count'] %}
-                    <span class="tag tag-run">scanning</span>
-                    {% elif p['status'] != 'active' %}
-                    <span class="tag tag-neutral">{{ p['status'] }}</span>
-                    {% endif %}
-                </div>
-                {% if p['client'] %}
-                <p class="card-kicker" style="margin:5px 0 0">{{ p['client'] }}</p>
-                {% endif %}
-                {% if p['description'] %}
-                <p class="sub" style="margin:6px 0 0;max-width:60ch">{{ p['description'] }}</p>
-                {% endif %}
-                <p class="card-meta" style="margin-top:12px">updated {{ p['updated_at'] }}</p>
-            </div>
-            <div style="text-align:right;flex:none;font-size:12px;line-height:1.9;
-                        color:color-mix(in srgb, var(--color-text) 55%, transparent)">
-                <div><b style="color:var(--color-text)">{{ p['task_count'] }}</b> tasks</div>
-                <div><b style="color:var(--color-text)">{{ p['host_count'] }}</b> hosts</div>
-                <div><b style="color:var(--color-text)">{{ p['finding_count'] }}</b> ports</div>
-            </div>
-        </a>
-        {% else %}
-        <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
-            <p class="sub">No projects yet. Create one, or run a quick scan.</p>
-        </div>
-        {% endfor %}
-        <div id="projectNoMatch" class="card elev-sm hidden"
-             style="padding:var(--space-8);text-align:center">
-            <p class="sub">No project matches that.</p>
-        </div>
+    <div class="tabs">
+        <a href="{{ url_for('projects.index', show='all') }}" class="{{ 'on' if show == 'all' }}">All</a>
+        <a href="{{ url_for('projects.index', show='active') }}" class="{{ 'on' if show == 'active' }}">Active</a>
+        <a href="{{ url_for('projects.index', show='archived') }}" class="{{ 'on' if show == 'archived' }}">Archived</a>
     </div>
 </div>
 
-<script>
-(function () {
-    var box = document.getElementById("projectSearch");
-    if (!box) { return; }
-    var rows = Array.prototype.slice.call(document.querySelectorAll(".project-row"));
-    var none = document.getElementById("projectNoMatch");
-    box.addEventListener("input", function () {
-        var q = box.value.trim().toLowerCase();
-        var shown = 0;
-        rows.forEach(function (r) {
-            var hit = !q || (r.dataset.search || "").indexOf(q) !== -1;
-            r.classList.toggle("hidden", !hit);
-            if (hit) { shown++; }
-        });
-        none.classList.toggle("hidden", shown > 0);
-    });
-})();
-</script>
+<div class="view-scroll">
+    <div class="colhead">
+        <span style="flex:1">Project</span>
+        <span style="width:120px; text-align:right">Tasks</span>
+        <span style="width:100px; text-align:right">Hosts</span>
+        <span style="width:100px; text-align:right">Ports</span>
+        <span style="width:150px; text-align:right">Updated</span>
+    </div>
+    {% for p in projects %}
+    {% set dim = 'var(--color-text)' if p['finding_count'] else 'rgba(233,233,237,.3)' %}
+    <a href="{{ url_for('projects.project_detail', project_id=p['id']) }}" class="lrow click"
+       style="padding:15px 28px; align-items:center">
+        <div style="flex:1; min-width:0">
+            <div style="display:flex; align-items:center; gap:9px">
+                <span style="font-family:var(--font-heading); font-size:15px; font-weight:500">{{ p['name'] }}</span>
+                {% if p['running_count'] %}
+                <span class="badge-state tag" style="border-radius:99px; border-color:color-mix(in srgb,#e0a03a 40%,transparent); background:color-mix(in srgb,#e0a03a 14%,transparent); color:#f0c076">
+                    <span class="dot2 live"></span>scanning</span>
+                {% elif p['status'] != 'active' %}
+                <span class="badge-state" style="color:rgba(233,233,237,.6); background:rgba(233,233,237,.09)">{{ p['status'] }}</span>
+                {% endif %}
+            </div>
+            <div style="margin-top:4px; font-size:12.5px; color:rgba(233,233,237,.45)">
+                {%- if p['client'] %}{{ p['client'] }}{% endif -%}
+                {%- if p['client'] and p['description'] %} · {% endif -%}
+                {%- if p['description'] %}{{ p['description'] }}{% endif -%}
+                {%- if not p['client'] and not p['description'] %}—{% endif -%}
+            </div>
+        </div>
+        <span class="mono" style="width:120px; text-align:right; font-size:13px; color:{{ dim }}">{{ p['task_count'] }}</span>
+        <span class="mono" style="width:100px; text-align:right; font-size:13px; color:{{ dim }}">{{ p['host_count'] }}</span>
+        <span class="mono" style="width:100px; text-align:right; font-size:13px; color:{{ dim }}">{{ p['finding_count'] }}</span>
+        <span style="width:150px; text-align:right; font-size:11.5px; color:rgba(233,233,237,.32)">{{ p['updated_at'] }}</span>
+    </a>
+    {% else %}
+    <div style="padding:60px 28px; text-align:center">
+        <p class="subline">No projects here yet. Create one, or run a quick scan.</p>
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}
 
 {% block dialogs %}

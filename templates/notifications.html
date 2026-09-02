@@ -1,63 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Notifications · Sloth{% endblock %}
 
-{% set icon_for = {'good':'check-circle', 'warn':'warning-circle',
-                   'bad':'x-circle', 'info':'info'} %}
-{% set tag_for  = {'good':'tag-ok', 'warn':'tag-pause', 'bad':'tag-bad',
-                   'info':'tag-neutral'} %}
+{% set icon_for = {'good':'ph-check-circle', 'warn':'ph-warning-circle',
+                   'bad':'ph-x-circle', 'info':'ph-info'} %}
+{% set hue_for  = {'good':'#7fd8b0', 'warn':'#f0c076', 'bad':'#ffb4b6', 'info':'#8ab2f5'} %}
+{% set bg_for   = {'good':'color-mix(in srgb,#3fb984 14%,transparent)',
+                   'warn':'color-mix(in srgb,#e0a03a 14%,transparent)',
+                   'bad':'color-mix(in srgb,#f2555a 14%,transparent)',
+                   'info':'color-mix(in srgb,#5b8def 14%,transparent)'} %}
 
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
-        <div>
-            <h3>Notifications</h3>
-            <p class="sub">
-                {% if notifications %}
-                    {{ notifications|length }} entr{{ 'y' if notifications|length == 1 else 'ies' }},
-                    newest first. Dismissing a toast never removes it — this is the record.
-                {% else %}
-                    Nothing yet. Scan activity will appear here.
-                {% endif %}
-            </p>
-        </div>
-        {% if notifications %}
-        <div class="page-actions">
-            <form method="post" action="{{ url_for('notifications.clear') }}"
-                  onsubmit="return confirm('Delete the whole notification log? Scan results are untouched.')">
-                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <button class="btn btn-ghost"><i class="ph ph-trash"></i>Clear log</button>
-            </form>
-        </div>
-        {% endif %}
+<div class="vhead" style="padding-bottom:16px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px">
+    <div>
+        <h1 class="h1">Notifications</h1>
+        <p class="subline">
+            {% if notifications %}{{ notifications|length }} entr{{ 'y' if notifications|length == 1 else 'ies' }},
+            newest first. Dismissing a toast never removes it — this is the record.
+            {% else %}Nothing yet. Scan activity will appear here.{% endif %}</p>
     </div>
-
     {% if notifications %}
-    <div class="stack">
-        {% for n in notifications %}
-        {% set body %}
-        <div class="card elev-sm" style="padding:var(--space-4) var(--space-6);
-             flex-direction:row;align-items:flex-start;gap:var(--space-4);color:var(--color-text)">
-            <i class="ph ph-{{ icon_for.get(n['level'], 'info') }}" style="font-size:18px;margin-top:2px"></i>
-            <div style="min-width:0;flex:1 1 auto">
-                <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-                    <span class="card-title" style="font-size:14px">{{ n['title'] }}</span>
-                    <span class="tag {{ tag_for.get(n['level'], 'tag-neutral') }}">{{ n['level'] }}</span>
-                    {% if not n['seen'] %}<span class="dot dot-live"></span>{% endif %}
-                </div>
-                {% if n['message'] %}<p class="sub" style="margin:6px 0 0">{{ n['message'] }}</p>{% endif %}
-                <p class="card-meta" style="margin:6px 0 0">{{ n['created_at'] }}</p>
-            </div>
-        </div>
-        {% endset %}
-        {% if n['task_id'] %}
-        <a href="{{ url_for('scan.task_detail', task_id=n['task_id']) }}">{{ body }}</a>
-        {% else %}{{ body }}{% endif %}
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="card elev-sm" style="padding:var(--space-8);text-align:center">
-        <p class="sub">No notifications yet.</p>
-    </div>
+    <form method="post" action="{{ url_for('notifications.clear') }}"
+          onsubmit="return confirm('Delete the whole notification log? Scan results are untouched.')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="cbtn cbtn-danger"><i class="ph ph-trash"></i>Clear log</button>
+    </form>
     {% endif %}
+</div>
+
+<div class="view-scroll">
+    {% for n in notifications %}
+    {% set hue = hue_for.get(n['level'], '#8ab2f5') %}
+    {% set body %}
+    <div class="lrow {{ 'click' if n['task_id'] }}" style="gap:13px; padding:13px 28px; align-items:flex-start; border-left:2px solid {{ hue }}">
+        <i class="ph {{ icon_for.get(n['level'], 'ph-info') }}" style="font-size:17px; color:{{ hue }}; margin-top:1px"></i>
+        <div style="flex:1; min-width:0">
+            <div style="display:flex; align-items:center; gap:9px">
+                <span style="font-size:13.5px; font-family:var(--font-heading); font-weight:500">{{ n['title'] }}</span>
+                <span class="badge-state" style="color:{{ hue }}; background:{{ bg_for.get(n['level'], bg_for['info']) }}; border:1px solid color-mix(in srgb, {{ hue }} 40%, transparent)">{{ n['level'] }}</span>
+                {% if not n['seen'] %}<span class="dot2 live" style="background:{{ hue }}"></span>{% endif %}
+            </div>
+            {% if n['message'] %}<div style="margin-top:5px; font-size:12.5px; color:rgba(233,233,237,.55)">{{ n['message'] }}</div>{% endif %}
+        </div>
+        <span class="mono" style="flex:none; font-size:11px; color:rgba(233,233,237,.3)">{{ n['created_at'] }}</span>
+    </div>
+    {% endset %}
+    {% if n['task_id'] %}<a href="{{ url_for('scan.task_detail', task_id=n['task_id']) }}" style="text-decoration:none; color:inherit">{{ body }}</a>
+    {% else %}{{ body }}{% endif %}
+    {% else %}
+    <div style="padding:60px 28px; text-align:center"><p class="subline">No notifications yet.</p></div>
+    {% endfor %}
 </div>
 {% endblock %}

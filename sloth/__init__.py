@@ -139,6 +139,12 @@ def create_app():
 
     app.jinja_env.globals["csrf_token"] = csrf_token
 
+    from .palette import port_family, FAMILIES, surface_summary
+    app.jinja_env.globals["port_family"] = port_family
+    app.jinja_env.globals["FAMILIES"] = FAMILIES
+    app.jinja_env.globals["surface_summary"] = surface_summary
+    app.jinja_env.globals["app_version"] = __version__
+
     @app.before_request
     def _check_csrf():
         """Blocks cross-site POSTs without breaking scripted access.

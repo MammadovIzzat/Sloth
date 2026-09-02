@@ -2,28 +2,29 @@
 {% block title %}Sign in · Sloth{% endblock %}
 
 {% block auth_content %}
-<div style="max-width:340px">
-    <h3 style="margin:0 0 6px">Sign in</h3>
-    <p class="sub" style="margin-bottom:26px">Sign in to continue.</p>
+<div style="max-width:360px">
+    <h1 class="h1" style="font-size:25px; margin-bottom:6px">Sign in</h1>
+    <p class="subline" style="margin:0 0 26px; line-height:1.7; max-width:44ch">Sign in to continue.</p>
 
-    <form method="post" style="display:flex;flex-direction:column;gap:var(--space-4)">
+    <form method="post" style="display:flex; flex-direction:column; gap:14px">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-        <div class="field">
-            <label for="lg-u">Username</label>
-            <input id="lg-u" class="input" name="username" autocomplete="username" autofocus required>
+        <div>
+            <label class="cfield-label" for="lg-u">Username</label>
+            <input id="lg-u" class="cinput" name="username" autocomplete="username" autofocus required>
         </div>
-        <div class="field">
-            <label for="lg-p">Password</label>
-            <input id="lg-p" class="input" name="password" type="password"
-                   autocomplete="current-password" required>
+        <div>
+            <label class="cfield-label" for="lg-p">Password</label>
+            <input id="lg-p" class="cinput" name="password" type="password" autocomplete="current-password" required>
         </div>
-        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+        <button class="cbtn cbtn-primary" type="submit" style="justify-content:center; margin-top:4px; padding:9px">Sign in</button>
     </form>
 
-    <p class="hint" style="margin-top:26px;max-width:42ch">
-        This tool runs as root and drives raw-socket scanners. Keep it bound to
-        localhost unless you have a reason not to.
-    </p>
+    <div style="display:flex; gap:10px; margin-top:26px; padding:11px 13px; border-radius:6px;
+         border:1px solid color-mix(in srgb,#e0a03a 30%,transparent); background:color-mix(in srgb,#e0a03a 7%,transparent)">
+        <i class="ph ph-warning" style="font-size:15px; color:#f0c076; margin-top:1px"></i>
+        <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.55); max-width:42ch">
+            This tool runs as root and drives raw-socket scanners. Keep it bound to localhost unless you have a reason not to.</p>
+    </div>
 </div>
 {% endblock %}

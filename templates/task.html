@@ -1,299 +1,221 @@
 {% extends "base.html" %}
-{% block title %}{{ task['name'] }} · {{ task['project_name'] }}{% endblock %}
+{% block title %}{{ task['target'] }} · {{ task['project_name'] }}{% endblock %}
 
 {% block content %}
-<div class="wrap">
-    <div class="page-head">
-        <div style="min-width:0">
-            <p class="card-kicker" style="margin:0 0 6px">
-                <a href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}"
-                   style="color:inherit">{{ task['project_name'] }}</a>
-            </p>
-            <h3 style="word-break:break-all">{{ task['name'] }}</h3>
-            <p class="sub" style="margin-top:6px">
-                <span class="host-ip">{{ task['target'] }}</span>
-                {% if host_count %} · {{ '{:,}'.format(host_count) }} addresses{% endif %}
-                {% if task['tcp_ports'] %} · TCP {{ task['tcp_ports'] }}{% endif %}
-                {% if task['udp_ports'] %} · UDP {{ task['udp_ports'] }}{% endif %}
-                {% if task['top_ports'] %} · top {{ task['top_ports'] }} ports{% endif %}
-                {% if task['scan_type'] == 'full' and task['engine'] == 'masscan' %}
-                    · {{ task['rate'] }} pkts/s
-                    · {{ task['retries'] if task['retries'] is not none else '?' }} retries
-                {% endif %}
-            </p>
-            <p style="margin-top:9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-                <span class="tag tag-outline">
-                    {{ {'full':'full port scan','quick':'quick scan',
-                        'discovery':'host discovery'}.get(task['scan_type'], task['scan_type']) }}
-                    {%- if task['scan_type'] == 'full' %} · {{ task['engine'] }}{% endif -%}
-                </span>
-                {% if discovery_label %}
-                <span class="card-meta">🔎 {{ discovery_label }}</span>
+{% set surface = surface_summary(hosts) %}
+{% set responded = hosts|length %}
+<div class="vhead" style="padding:16px 24px 0">
+    <div class="crumb">
+        <a href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}">{{ task['project_name'] }}</a>
+        <span class="sep">/</span>
+        <span class="mono" style="color:rgba(233,233,237,.6)">{{ task['target'] }}</span>
+        <span id="statusLine" style="margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+              font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:rgba(233,233,237,.5)">
+            <span id="statusDot" class="dot2"></span><span id="statusText">{{ task['status'] }}</span>
+            <span id="phaseBadge" class="hidden"></span>
+        </span>
+    </div>
+
+    <div style="display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap">
+        <div style="min-width:0; flex:1 1 420px">
+            <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap">
+                <h1 class="h1-mono" style="word-break:break-all">{{ task['target'] }}</h1>
+                <span style="font-size:13px; color:rgba(233,233,237,.45)">
+                    {% if host_count %}{{ '{:,}'.format(host_count) }} addresses · {% endif %}<span id="respondedCount">{{ responded }}</span> responded</span>
+            </div>
+            {# the scan as the command it actually is #}
+            <div class="cmd" style="margin-top:11px">
+                <span class="dollar">$</span>
+                {% if task['scan_type'] == 'full' %}
+                <span class="tool">{{ task['engine'] }}</span>
+                <span class="target">{{ task['target'] }}</span>
+                {% if task['tcp_ports'] %}<span class="arg">-p{{ task['tcp_ports'] }}</span>{% endif %}
+                {% if task['udp_ports'] %}<span class="arg">-pU:{{ task['udp_ports'] }}</span>{% endif %}
+                {% if task['engine'] == 'masscan' %}<span class="arg">--rate {{ task['rate'] or 1000 }}</span>
+                <span class="arg">--retries {{ task['retries'] if task['retries'] is not none else 3 }}</span>{% endif %}
+                {% elif task['scan_type'] == 'quick' %}
+                <span class="tool">nmap</span>
+                {% if task['quick_proto'] in ('udp','both') %}<span class="arg">-sU</span>{% endif %}
+                {% if task['quick_proto'] in ('tcp','both') %}<span class="arg">-sT</span>{% endif %}
+                <span class="target">{{ task['target'] }}</span>
+                <span class="arg">--top-ports {{ task['top_ports'] or 1000 }}</span>
                 {% else %}
-                <span class="card-meta">no host discovery — every address gets scanned</span>
+                <span class="tool">discovery</span>
+                <span class="target">{{ task['target'] }}</span>
                 {% endif %}
-            </p>
-            {% if task['notes'] %}<p class="sub" style="margin-top:8px">{{ task['notes'] }}</p>{% endif %}
-        </div>
-
-        <div class="page-actions">
-            <span id="phaseBadge" class="tag hidden"></span>
-            <span id="statusBadge" class="tag"></span>
-            <button id="settingsBtn" class="btn btn-ghost" title="Change what this run does">
-                <i class="ph ph-sliders-horizontal"></i>Scan</button>
-            <button id="startBtn" class="btn btn-primary"><i class="ph ph-play"></i>Start</button>
-            <button id="resumeFileBtn" class="btn btn-ghost hidden"
-                    title="Continue from masscan's saved paused.conf">
-                <i class="ph ph-arrow-u-down-left"></i>Resume saved</button>
-            <button id="pauseBtn" class="btn btn-ghost hidden"><i class="ph ph-pause"></i>Pause</button>
-            <button id="stopBtn" class="btn btn-ghost hidden"><i class="ph ph-stop"></i>Stop</button>
-        </div>
-    </div>
-
-    <div id="progressWrap" class="hidden" style="margin-bottom:var(--space-6)">
-        <div class="progress-meta">
-            <span id="progressLabel">0.00% done</span>
-            <span id="rateLabel"></span>
-        </div>
-        <div class="progress-track"><div id="progressBar" class="progress-bar" style="width:0%"></div></div>
-    </div>
-
-    {# A task is a target, not one fixed scan: change these and press Start and
-       the new run's findings accumulate against the same task. #}
-    <form id="runSettings" class="card elev-sm hidden" data-scan-form
-          style="padding:var(--space-6);margin-bottom:var(--space-6)">
-        <div class="grid-2">
-            <div class="field">
-                <label for="cfgScanType">Scan type</label>
-                <select id="cfgScanType" class="input" data-scan-type>
-                    {% for key, label in scan_types.items() %}
-                    <option value="{{ key }}" {{ 'selected' if key == task['scan_type'] }}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <p class="hint" data-type-help></p>
-            </div>
-            <div class="field" data-when="full">
-                <label for="cfgEngine">Engine</label>
-                <select id="cfgEngine" class="input" data-scan-engine>
-                    {% for key, meta in engines.items() %}
-                    <option value="{{ key }}" {{ 'selected' if key == task['engine'] }}
-                            data-note="{{ meta['note'] }}">{{ meta['label'] }}</option>
-                    {% endfor %}
-                </select>
-                <p class="hint" data-engine-help></p>
+                {% if discovery_label %}<span class="muted">🔎 {{ discovery_label }}</span>
+                {% else %}<span class="muted">--no-discovery</span>{% endif %}
             </div>
         </div>
 
-        <div class="field" style="margin-top:var(--space-4)">
-            <label for="cfgDiscovery">Host discovery</label>
-            <select id="cfgDiscovery" class="input" data-scan-discovery>
-                <option value="">None — scan every address</option>
-                {% for p in discovery_profiles %}
-                <option value="{{ p['key'] }}" {{ 'selected' if p['key'] == task['discovery'] }}
-                        data-note="{{ p['description'] }}" data-tool="{{ p['tool'] }}"
-                        data-local="{{ 1 if p['local_only'] else 0 }}">{{ p['label'] }}</option>
-                {% endfor %}
+        <div id="taskActions" style="display:flex; gap:8px; align-items:center; flex:none; padding-top:4px; flex-wrap:wrap; justify-content:flex-end">
+            <button id="settingsBtn" class="cbtn" title="Change what this run does"><i class="ph ph-sliders-horizontal"></i>Scan</button>
+            <button class="cbtn" data-dialog-open="dlg-export-task"><i class="ph ph-export"></i>Export</button>
+            <button id="resumeFileBtn" class="cbtn hidden" title="Continue from masscan's saved paused.conf"><i class="ph ph-arrow-u-down-left"></i>Resume saved</button>
+            <button id="startBtn" class="cbtn cbtn-primary"><i class="ph ph-play"></i>Run again</button>
+            <button id="pauseBtn" class="cbtn hidden"><i class="ph ph-pause"></i>Pause</button>
+            <button id="stopBtn" class="cbtn cbtn-danger hidden"><i class="ph ph-stop"></i>Stop</button>
+        </div>
+    </div>
+
+    {# live sweep progress — shown only while running/paused #}
+    <div id="progressWrap" class="hidden" style="margin-top:14px">
+        <div style="height:3px; background:rgba(233,233,237,.08); position:relative; overflow:hidden; border-radius:2px">
+            <div id="progressBar" style="position:absolute; inset:0 auto 0 0; width:0%; background:#e0a03a"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:7px 0 0;
+             font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:rgba(233,233,237,.42)">
+            <span id="progressLabel">0.00% done</span><span id="rateLabel"></span>
+        </div>
+    </div>
+
+    <div id="networkAlertBox" class="hidden" style="margin-top:12px"></div>
+
+    {% if surface %}
+    <div class="band" id="surfaceBand">
+        {% for s in surface %}
+        <div class="band-cell click" data-filter="{{ s['port'] }}" style="border-bottom-color:{{ s['hue'] }}">
+            <div class="band-n" style="color:{{ s['hue'] }}">{{ s['n'] }}</div>
+            <div class="band-label">{{ s['label'] }}</div>
+            <div class="band-sub">{{ s['port'] }}/{{ s['proto'] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+{# per-run scan settings — findings from every run accumulate on this task #}
+<form id="runSettings" class="hidden" data-scan-form
+      style="flex:none; padding:16px 24px; border-bottom:1px solid var(--color-divider);
+             background:color-mix(in srgb, var(--color-bg) 60%, #000)">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+            <label class="cfield-label" for="cfgScanType">Scan type</label>
+            <select id="cfgScanType" class="cinput" data-scan-type>
+                {% for key, label in scan_types.items() %}
+                <option value="{{ key }}" {{ 'selected' if key == task['scan_type'] }}>{{ label }}</option>{% endfor %}
             </select>
-            <p class="hint" data-discovery-help></p>
         </div>
-
-        <div class="grid-2" style="margin-top:var(--space-4)" data-when="full">
-            <div class="field">
-                <label for="cfgTcp">TCP ports</label>
-                <input id="cfgTcp" class="input" value="{{ task['tcp_ports'] or '1-65535' }}">
-            </div>
-            <div class="field">
-                <label for="cfgUdp">UDP ports</label>
-                <input id="cfgUdp" class="input" value="{{ task['udp_ports'] or '' }}" placeholder="blank = skip">
-            </div>
+        <div data-when="full">
+            <label class="cfield-label" for="cfgEngine">Engine</label>
+            <select id="cfgEngine" class="cinput" data-scan-engine>
+                {% for key, meta in engines.items() %}
+                <option value="{{ key }}" {{ 'selected' if key == task['engine'] }} data-note="{{ meta['note'] }}">{{ meta['label'] }}</option>{% endfor %}
+            </select>
         </div>
-
-        <div class="grid-2" style="margin-top:var(--space-4)" data-when="quick">
-            <div class="field">
-                <label for="cfgQuickProto">Protocol</label>
-                <select id="cfgQuickProto" class="input" name="quick_proto">
-                    {% for key, label in quick_protocols.items() %}
-                    <option value="{{ key }}" {{ 'selected' if key == (task['quick_proto'] or 'tcp') }}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <p class="hint">UDP is far slower — nmap waits on rate-limited ICMP replies.</p>
-            </div>
-            <div class="field">
-                <label for="cfgTop">Top ports</label>
-                <input id="cfgTop" class="input" type="number" min="1" max="65535"
-                       value="{{ task['top_ports'] or 1000 }}">
-            </div>
+    </div>
+    <div style="margin-top:12px">
+        <label class="cfield-label" for="cfgDiscovery">Host discovery</label>
+        <select id="cfgDiscovery" class="cinput" data-scan-discovery>
+            <option value="">None — scan every address</option>
+            {% for p in discovery_profiles %}
+            <option value="{{ p['key'] }}" {{ 'selected' if p['key'] == task['discovery'] }}
+                    data-note="{{ p['description'] }}" data-tool="{{ p['tool'] }}" data-local="{{ 1 if p['local_only'] else 0 }}">{{ p['label'] }}</option>{% endfor %}
+        </select>
+        <p class="cfield-label" data-discovery-help style="margin-top:6px; color:rgba(233,233,237,.38)"></p>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px" data-when="full">
+        <div><label class="cfield-label" for="cfgTcp">TCP ports</label>
+            <input id="cfgTcp" class="cinput" value="{{ task['tcp_ports'] or '1-65535' }}"></div>
+        <div><label class="cfield-label" for="cfgUdp">UDP ports</label>
+            <input id="cfgUdp" class="cinput" value="{{ task['udp_ports'] or '' }}" placeholder="blank = skip"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px" data-when="quick">
+        <div><label class="cfield-label" for="cfgQuickProto">Protocol</label>
+            <select id="cfgQuickProto" class="cinput" name="quick_proto">
+                {% for key, label in quick_protocols.items() %}
+                <option value="{{ key }}" {{ 'selected' if key == (task['quick_proto'] or 'tcp') }}>{{ label }}</option>{% endfor %}
+            </select></div>
+        <div><label class="cfield-label" for="cfgTop">Top ports</label>
+            <input id="cfgTop" class="cinput" type="number" min="1" max="65535" value="{{ task['top_ports'] or 1000 }}"></div>
+    </div>
+    <div style="margin-top:12px" data-when="quick">
+        <label class="cfield-label" for="cfgNmapPorts">Or explicit range</label>
+        <input id="cfgNmapPorts" class="cinput" placeholder="e.g. 1-65535">
+    </div>
+    <div data-when="full" data-engine="masscan">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px">
+            <div><label class="cfield-label" for="cfgRate">Rate (pkts/s)</label>
+                <input id="cfgRate" class="cinput" type="number" min="100" value="{{ task['rate'] or 1000 }}"></div>
+            <div><label class="cfield-label" for="cfgRetries">Retries</label>
+                <input id="cfgRetries" class="cinput" type="number" min="0" max="10" value="{{ task['retries'] if task['retries'] is not none else 3 }}"></div>
         </div>
-        <div class="field" style="margin-top:var(--space-4)" data-when="quick">
-            <label for="cfgNmapPorts">Or explicit range</label>
-            <input id="cfgNmapPorts" class="input" placeholder="e.g. 1-65535">
-        </div>
+    </div>
+    <p class="cfield-label" data-engine-help style="margin-top:10px; color:rgba(233,233,237,.38)"></p>
+</form>
 
-        <div data-when="full" data-engine="masscan">
-            <div class="grid-2" style="margin-top:var(--space-4)">
-                <div class="field">
-                    <label for="cfgRate">Rate (pkts/s)</label>
-                    <input id="cfgRate" class="input" type="number" min="100" value="{{ task['rate'] or 1000 }}">
-                </div>
-                <div class="field">
-                    <label for="cfgRetries">Retries</label>
-                    <input id="cfgRetries" class="input" type="number" min="0" max="10"
-                           value="{{ task['retries'] if task['retries'] is not none else 3 }}">
-                </div>
+{# ═══ results: host/port list + inspector ═══ #}
+<div class="results">
+    <div class="results-list">
+        <div class="results-bar">
+            <div class="csearch" style="flex:1 1 auto; max-width:380px">
+                <i class="ph ph-magnifying-glass"></i>
+                <input id="resultSearch" type="search" autocomplete="off" placeholder="filter — 3306, mysql, .8">
             </div>
-        </div>
-
-        <p class="hint" style="margin-top:var(--space-4)">
-            Findings from every run accumulate against this task — nothing is replaced.
-        </p>
-    </form>
-
-    <div id="networkAlertBox" class="hidden" style="margin-bottom:var(--space-6)"></div>
-
-    <div class="split">
-        <div class="split-main">
-            <div class="row-between" style="margin-bottom:var(--space-3)">
-                <div style="display:flex;align-items:baseline;gap:10px">
-                    <h6 class="card-kicker" style="margin:0">Hosts and open ports</h6>
-                    <span id="hostCount" class="host-meta"></span>
-                </div>
-                <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap">
-                    <div class="seg">
-                        <label class="seg-opt"><input type="radio" name="hostview" value="table" checked>
-                            <i class="ph ph-rows"></i>Table</label>
-                        <label class="seg-opt"><input type="radio" name="hostview" value="cards">
-                            <i class="ph ph-squares-four"></i>Cards</label>
-                    </div>
-                    <div style="display:flex;gap:14px;font-size:12px;align-items:center">
-                        <span class="host-meta">Export</span>
-                        {% for fmt in ('html', 'txt', 'json') %}
-                        <a href="{{ url_for('reports.export_task', task_id=task['id'], format=fmt) }}">{{ fmt|upper }}</a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="results-toolbar" style="margin-bottom:var(--space-3)">
-                <input id="resultSearch" class="input result-search" type="search" autocomplete="off"
-                       placeholder="Filter by host, port or service — e.g. 443, http, ssh">
-                {# Only affects the cards view; the button reflects that in JS. #}
-                <button id="toggleAll" class="btn btn-ghost" type="button"
-                        title="Expand or collapse every host card">
-                    <i class="ph ph-arrows-out-line-vertical"></i><span>Expand all</span></button>
-            </div>
-
-            {# Both views are rendered; the toggle shows one. task.js keeps them
-               in step as findings stream in. #}
-            <div id="resultsTable" class="card elev-sm"
-                 style="padding:var(--space-2) var(--space-4) var(--space-4);overflow-x:auto">
-                <table class="table" style="min-width:440px">
-                    <thead><tr>
-                        <th style="width:22%">Host</th><th style="width:16%">Port</th>
-                        <th>Service</th><th style="width:14%">Source</th>
-                        <th style="width:1%"></th>
-                    </tr></thead>
-                    <tbody id="resultsRows">
-                    {% for h in hosts %}{% for p in h['ports'] %}
-                        <tr class="host-row" data-ip="{{ h['ip'] }}" data-port="{{ p['port'] }}/{{ p['proto'] }}">
-                            <td class="cell-ip">{{ h['ip'] }}</td>
-                            <td class="cell-port">{{ p['port'] }}/{{ p['proto'] }}</td>
-                            <td class="cell-svc">{{ p['service'] or '—' }}</td>
-                            <td class="cell-src">{{ p['source'] }}</td>
-                            <td class="cell-actions"{% if loop.first %} data-first="1"{% endif %}></td>
-                        </tr>
-                    {% endfor %}{% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="resultsCards" class="stack" hidden>
-                {% for h in hosts %}
-                <div class="host card elev-sm host-card" data-ip="{{ h['ip'] }}">
-                    <div class="host-head">
-                        <div class="host-id">
-                            <span class="host-ip">{{ h['ip'] }}</span>
-                            <span class="host-meta">
-                                {%- if h.get('discovered_by') %}{{ h['discovered_by'] }}{% endif -%}
-                                {%- if h.get('discovered_by') and h['ports'] %} · {% endif -%}
-                                {%- if h['ports'] %}{{ h['ports']|length }} ports{% endif -%}
-                            </span>
-                        </div>
-                        <div class="host-actions"></div>
-                    </div>
-                    <div class="ports ports-container" {% if not h['ports'] %}data-alive="1"{% endif %}>
-                        {% if not h['ports'] %}
-                        <span class="host-empty">host is up — no open ports recorded</span>
-                        {% endif %}
-                        {% for p in h['ports'] %}
-                        <span class="tag tag-neutral port {{ 'port-filtered' if not p['state'].startswith('open') }}"
-                              data-port="{{ p['port'] }}/{{ p['proto'] }}"
-                              title="{{ p['state'] }} · found by {{ p['source'] }}">
-                            <span class="port-num">{{ p['port'] }}/{{ p['proto'] }}</span>
-                            {% if p['service'] %}<span class="port-svc">{{ p['service'] }}</span>{% endif %}
-                        </span>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div id="emptyState" class="card elev-sm {{ 'hidden' if hosts }}"
-                 style="padding:var(--space-8);text-align:center">
-                <p class="sub">Nothing found yet. Press Start to run this task.</p>
+            <span id="resultCount" class="mono" style="font-size:11.5px; color:rgba(233,233,237,.42)"></span>
+            <div class="seg2">
+                <button id="segHost" type="button" class="on">By host</button>
+                <button id="segPort" type="button">By port</button>
             </div>
         </div>
-
-        <aside class="split-aside">
-            <div class="card elev-sm log-card" style="padding:var(--space-4)">
-                <div class="log-head">
-                    <h6 class="card-kicker" style="margin:0">Scanner output</h6>
-                    {# Mirrors the task state, so the panel shows life at a glance. #}
-                    <span id="logDot" class="dot"></span>
-                </div>
-                <pre id="logBox" class="log">{{ scan_log }}</pre>
+        <div class="view-scroll" id="listScroll">
+            <div id="hostList"></div>
+            <div id="portList" hidden></div>
+            <div id="emptyState" class="{{ 'hidden' if hosts }}" style="padding:48px 24px; text-align:center">
+                <p class="subline">Nothing found yet. Press <b>Run again</b> to scan this target.</p>
             </div>
+        </div>
+    </div>
 
-            {# Always shown: an empty panel that explains itself beats a blank box
-               that reads as broken. Reports follow the host, so a report run
-               under another scan of the same target still shows here. #}
-            <div id="nmapReports" class="card elev-sm" style="padding:var(--space-4)">
-                <div class="log-head" style="margin-bottom:8px">
-                    <h6 class="card-kicker" style="margin:0">Nmap reports</h6>
-                    <select id="nmapSort" class="input nmap-sort {{ 'hidden' if not nmap_scans }}"
-                            title="Sort the reports">
-                        <option value="new">Newest first</option>
-                        <option value="old">Oldest first</option>
-                        <option value="ip">By IP</option>
-                    </select>
-                </div>
-                <input id="nmapSearch" class="input nmap-search {{ 'hidden' if not nmap_scans }}"
-                       type="search" autocomplete="off"
-                       placeholder="Filter reports by IP or tool…" style="margin-bottom:8px">
-                <div id="nmapList" class="nmap-list">
-                    {% for s in nmap_scans %}
-                    <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}"
-                       class="ellipsis nmap-entry" data-ip="{{ s['ip'] }}"
-                       data-ts="{{ s['created_at'] }}" data-tool="{{ s['tool'] }}">
-                        {{ s['ip'] }} · {{ s['created_at']|shortdate }}
-                        {%- if s['tool'] %} · {{ s['tool'] }}{% endif %}</a>
-                    {% endfor %}
-                </div>
-                <p id="nmapEmpty" class="report-empty {{ 'hidden' if nmap_scans }}">
-                    No nmap reports for these hosts yet. Use <b>Rescan</b> on a host to
-                    run nmap and its report lands here.</p>
+    {# inspector: the selected host in detail #}
+    <div class="inspector" id="inspector">
+        <div class="insp-head">
+            <div class="mono" id="inspIp" style="font-size:16px">—</div>
+            <div id="inspMeta" style="font-size:11.5px; color:rgba(233,233,237,.42); margin-top:3px"></div>
+            <div id="inspActions" style="display:flex; gap:6px; margin-top:11px"></div>
+        </div>
+        <div class="insp-scroll">
+            <div class="insp-label seclabel">Open ports</div>
+            <div id="inspPorts"></div>
+            <div class="insp-label seclabel" style="padding-top:16px">Nmap reports</div>
+            <div id="inspReports"></div>
+            <p id="inspReportsEmpty" class="report-empty" style="padding:2px 18px 6px">
+                No reports yet — use <b>Rescan</b> above.</p>
+            <div style="padding:16px 18px 6px; display:flex; align-items:baseline; justify-content:space-between">
+                <span class="seclabel">Scanner log</span>
+                <span id="logDot" class="dot2" style="background:rgba(233,233,237,.3)"></span>
             </div>
+            <pre id="logBox" class="console-log" style="padding:0 18px 18px">{{ scan_log }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-            {# Running per-host rescans, in the rail beside the reports they
-               produce, so a long nmap always has a reachable Stop. Populated by
-               task.js regardless of the table/cards toggle. #}
-            <div id="activeRescans" class="rescan-strip hidden"></div>
-
-            <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
-                  onsubmit="return confirm('Delete this task and its findings?')">
-                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <button class="btn btn-ghost" style="font-size:12px;color:#ffb4b6">Delete task</button>
-            </form>
-        </aside>
+{% block dialogs %}
+<div class="dialog-backdrop hidden" id="dlg-export-task">
+    <div class="dialog">
+        <div class="row-between">
+            <span class="dialog-title">Export {{ task['target'] }}</span>
+            <a href="#" data-dialog-close style="font-size:17px;display:flex"><i class="ph ph-x"></i></a>
+        </div>
+        <div class="dialog-body">
+            {% set formats = [
+                ('html', 'ph-file-html', 'Report', 'Self-contained page with the screenshots embedded.'),
+                ('json', 'ph-arrows-left-right', 'Transferable data', 'Everything, screenshots included — the file another Sloth imports.'),
+                ('txt',  'ph-text-align-left', 'Plain text', 'One finding per line, in the shape grep and cut expect.')] %}
+            {% for fmt, icon, label, note in formats %}
+            <a class="lrow click" style="padding:12px 14px; gap:12px; align-items:flex-start; border-radius:8px"
+               href="{{ url_for('reports.export_task', task_id=task['id'], format=fmt) }}">
+                <i class="ph {{ icon }}" style="font-size:19px; margin-top:2px; color:var(--color-accent)"></i>
+                <span style="min-width:0">
+                    <span style="font-family:var(--font-heading); font-size:14px">{{ label }}</span>
+                    <span class="badge-state" style="margin-left:8px; color:rgba(233,233,237,.6); background:rgba(233,233,237,.09)">.{{ fmt }}</span>
+                    <p class="subline" style="margin:4px 0 0">{{ note }}</p>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="dialog-actions"><button type="button" class="btn btn-ghost" data-dialog-close>Close</button></div>
     </div>
 </div>
 {% endblock %}
@@ -309,7 +231,9 @@ window.TASK = {
     rescanning: {{ rescanning|tojson }},
     rescanTools: {{ rescan_tools|tojson }},
     autostart: {{ autostart|tojson }},
-    csrf: {{ csrf_token()|tojson }}
+    csrf: {{ csrf_token()|tojson }},
+    hosts: {{ hosts|tojson }},
+    reports: {{ nmap_scans|tojson }}
 };
 </script>
 <script src="{{ url_for('static', filename='js/scan-fields.js', v=asset_version) }}"></script>
