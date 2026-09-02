@@ -6,7 +6,6 @@
                   'interrupted':'tag-neutral', 'pending':'tag-outline'} %}
 
 {% block content %}
-{% set surface = surface_summary(hosts) %}
 <div class="vhead">
     <div class="crumb">
         <a href="{{ url_for('projects.index') }}">Projects</a>
@@ -29,17 +28,6 @@
             <a class="cbtn cbtn-primary" href="{{ url_for('projects.new_task', project_id=project['id']) }}"><i class="ph ph-plus"></i>New task</a>
         </div>
     </div>
-    {% if surface %}
-    <div class="band">
-        {% for s in surface %}
-        <div class="band-cell" style="border-bottom-color:{{ s['hue'] }}">
-            <div class="band-n" style="color:{{ s['hue'] }}">{{ s['n'] }}</div>
-            <div class="band-label">{{ s['label'] }}</div>
-            <div class="band-sub">{{ s['port'] }}/{{ s['proto'] }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 </div>
 
 <div class="view-scroll" style="padding-bottom:40px">
@@ -83,43 +71,6 @@
     {% else %}
     <div style="padding:40px 28px; text-align:center"><p class="subline">No tasks yet. Add one to start scanning.</p></div>
     {% endfor %}
-
-    {% if hosts %}
-    <div style="display:flex; align-items:baseline; gap:10px; padding:22px 28px 9px; border-bottom:1px solid var(--color-divider)">
-        <span class="seclabel">All hosts in this project</span>
-        <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ hosts|length }}</span>
-    </div>
-    {% for h in hosts %}
-    <div class="lrow" style="padding:9px 28px">
-        <span class="lrow-ip" style="flex:none; width:112px">{{ h['ip'] }}</span>
-        <div class="lrow-ports">
-            {% for p in h['ports'] %}
-            {% set fam = port_family(p['port'], p['service']) %}
-            <span class="pill" style="color:{{ fam['hue'] }}; background:{{ fam['bg'] }}{{ '; opacity:.6' if not p['state'].startswith('open') }}"
-                  title="{{ p['state'] }} · {{ p['tasks']|join(', ') }}">
-                <b>{{ p['port'] }}</b><span class="svc">{{ p['service'] or p['proto'] }}</span></span>
-            {% else %}
-            <span class="host-empty">host is up — no open ports recorded</span>
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if nmap_scans %}
-    <div style="display:flex; align-items:baseline; gap:10px; padding:22px 28px 9px; border-bottom:1px solid var(--color-divider)">
-        <span class="seclabel">Nmap reports</span>
-        <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ nmap_scans|length }}</span>
-    </div>
-    {% for s in nmap_scans %}
-    <a href="{{ url_for('reports.nmap_result', scan_id=s['id']) }}" class="lrow click" style="padding:11px 28px">
-        <span class="lrow-ip" style="flex:none; width:112px; color:var(--color-accent-200)">{{ s['ip'] }}</span>
-        <span style="flex:1; min-width:0; font-size:12.5px; color:rgba(233,233,237,.55)">
-            {{ s['created_at'] }}{% if s['task_name'] %} · {{ s['task_name'] }}{% endif %}</span>
-        <span class="mono" style="flex:none; font-size:11.5px; color:var(--color-accent-300)">{{ s['tool'] }}</span>
-    </a>
-    {% endfor %}
-    {% endif %}
 </div>
 {% endblock %}
 
