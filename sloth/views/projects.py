@@ -169,6 +169,8 @@ def _create_tool_task(project_id, fmt, form):
     as params_json for the runner. No masscan config involved."""
     if fmt not in FORMAT_BY_ID:
         raise ValueError(f"Unknown task format: {fmt}")
+    if FORMAT_BY_ID[fmt].get("coming_soon"):
+        raise ValueError(f"The {FORMAT_BY_ID[fmt]['name']} tool isn't available yet.")
     target = (form.get("target") or "").strip()
     if fmt != "headers" and not target:
         raise ValueError("This task needs a domain or URL.")

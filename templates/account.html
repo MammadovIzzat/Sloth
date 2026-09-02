@@ -33,6 +33,36 @@
             </form>
         </div>
 
+        <div style="padding:22px 0; border-bottom:1px solid var(--color-divider)">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+                <span class="seclabel">Shodan API key</span>
+                {% if shodan_configured %}
+                <span class="badge-state" style="color:#7fd8b0; background:color-mix(in srgb,#3fb984 14%,transparent)">configured</span>
+                {% else %}
+                <span class="badge-state" style="color:rgba(233,233,237,.6); background:rgba(233,233,237,.09)">not set</span>
+                {% endif %}
+            </div>
+            <p style="margin:0 0 14px; font-size:12.5px; line-height:1.75; color:rgba(233,233,237,.5); max-width:56ch">
+                Used by Shodan-domain tasks. Get it from your
+                <span class="mono" style="color:rgba(233,233,237,.7)">shodan.io</span> account page. Stored in a
+                file on this host, never in the results database.
+                {% if not shodan_installed %}<br><span style="color:#f0c076">The shodan CLI isn't installed — <span class="mono">pipx install shodan</span>.</span>{% endif %}
+            </p>
+            <form method="post" action="{{ url_for('auth.shodan_key') }}"
+                  style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; max-width:520px">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <div style="flex:1 1 260px; min-width:0">
+                    <label class="cfield-label" for="sh-key">API key</label>
+                    <input id="sh-key" class="cinput mono" name="api_key" type="password"
+                           autocomplete="off" placeholder="{{ '•••••••••• (set)' if shodan_configured else 'paste your key' }}">
+                </div>
+                <button class="cbtn cbtn-accent" type="submit"><i class="ph ph-key"></i>Save key</button>
+                {% if shodan_configured %}
+                <button class="cbtn" type="submit" name="remove" value="1">Remove</button>
+                {% endif %}
+            </form>
+        </div>
+
         <div style="padding:22px 0">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
                 <span class="seclabel">API token</span>

@@ -55,6 +55,11 @@
             <button id="startBtn" class="cbtn cbtn-primary"><i class="ph ph-play"></i>Run again</button>
             <button id="pauseBtn" class="cbtn hidden"><i class="ph ph-pause"></i>Pause</button>
             <button id="stopBtn" class="cbtn cbtn-danger hidden"><i class="ph ph-stop"></i>Stop</button>
+            <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
+                  onsubmit="return confirm('Delete this task and its findings?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="cbtn cbtn-danger cbtn-icon" title="Delete task"><i class="ph ph-trash"></i></button>
+            </form>
         </div>
     </div>
 

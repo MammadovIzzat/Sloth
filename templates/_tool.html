@@ -1,5 +1,5 @@
 {# Shared chrome for the tool-task result pages (shodan/archive/headers/source). #}
-{% macro head(task, fmt, title, sub, cmd_rest) %}
+{% macro head(task, fmt, title, sub, cmd_rest, show_cmd=True) %}
 <div class="vhead" style="padding:12px 22px 0">
     <div class="crumb">
         <a href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}">{{ task['project_name'] }}</a>
@@ -16,15 +16,22 @@
                 <h1 class="h1-mono" style="font-size:22px">{{ title }}</h1>
                 <span style="font-size:13px; color:rgba(233,233,237,.45)">{{ sub }}</span>
             </div>
+            {% if show_cmd %}
             <div class="cmd" style="margin-top:9px">
                 <span class="dollar">$</span>
                 <span class="tool" style="color:{{ fmt['hue'] }}">{{ fmt['cmd_head'] }}</span>
                 <span class="muted" style="color:rgba(233,233,237,.72)">{{ cmd_rest }}</span>
             </div>
+            {% endif %}
         </div>
         <div style="display:flex; gap:8px; flex:none; padding-top:4px">
             <button id="runBtn" class="cbtn {{ 'hidden' if task['status'] == 'running' }}"><i class="ph ph-arrows-clockwise"></i>{{ 'Run' if not task['result_json'] else 'Re-run' }}</button>
             <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}"><i class="ph ph-arrow-left"></i>Project</a>
+            <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
+                  onsubmit="return confirm('Delete this task and its results?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="cbtn cbtn-danger cbtn-icon" title="Delete task"><i class="ph ph-trash"></i></button>
+            </form>
         </div>
     </div>
     {% if result and result['metrics'] %}

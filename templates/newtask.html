@@ -128,22 +128,33 @@
           action="{{ url_for('projects.create_task', project_id=project['id']) }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <input type="hidden" name="format" value="{{ f['id'] }}">
+        {% set cs = f['coming_soon'] %}
         <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:16px">
             <span class="seclabel">{{ f['name'] }} task</span>
             <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ f['engine'] }}</span>
+            {% if cs %}<span class="badge-state" style="margin-left:auto; color:{{ f['hue'] }}; background:color-mix(in srgb, {{ f['hue'] }} 14%, transparent); border:1px solid color-mix(in srgb, {{ f['hue'] }} 40%, transparent)">coming soon</span>{% endif %}
         </div>
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px">
+        {% if cs %}
+        <div style="display:flex; gap:10px; margin-bottom:20px; padding:11px 13px; border-radius:6px;
+             border:1px solid color-mix(in srgb, {{ f['hue'] }} 30%, transparent); background:color-mix(in srgb, {{ f['hue'] }} 7%, transparent)">
+            <i class="ph ph-hammer" style="font-size:15px; color:{{ f['hue'] }}; margin-top:1px"></i>
+            <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.6)">
+                This tool isn't ready yet — it's on the way. Here's the shape it will take.</p>
+        </div>
+        {% endif %}
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px{{ '; opacity:.55; pointer-events:none' if cs }}">
             {% for fld in f['fields'] %}
             <div style="grid-column:{{ fld['span'] }}; min-width:0">
                 <label class="cfield-label" for="{{ f['id'] }}-{{ fld['name'] }}">{{ fld['label'] }}</label>
                 {% set ph = fld['ph'].format(version=app_version) if '{version}' in fld['ph'] else fld['ph'] %}
                 {% if fld.get('textarea') %}
                 <textarea id="{{ f['id'] }}-{{ fld['name'] }}" name="{{ fld['name'] }}" rows="3"
-                          class="cinput" placeholder="{{ ph }}"></textarea>
+                          class="cinput" placeholder="{{ ph }}" {{ 'disabled' if cs }}></textarea>
                 {% else %}
                 <input id="{{ f['id'] }}-{{ fld['name'] }}" name="{{ fld['name'] }}"
-                       class="cinput {{ 'mono' if fld['font'] == 'mono' }}" placeholder="{{ ph }}">
+                       class="cinput {{ 'mono' if fld['font'] == 'mono' }}" placeholder="{{ ph }}" {{ 'disabled' if cs }}>
                 {% endif %}
                 {% if fld['hint'] %}<div style="margin-top:5px; font-size:11px; color:rgba(233,233,237,.35)">{{ fld['hint'] }}</div>{% endif %}
             </div>
@@ -164,8 +175,12 @@
         {% endif %}
 
         <div style="display:flex; gap:8px; margin-top:26px">
+            {% if cs %}
+            <button class="cbtn cbtn-primary" type="button" disabled style="opacity:.5; cursor:not-allowed"><i class="ph ph-play"></i>Run task</button>
+            {% else %}
             <button class="cbtn cbtn-primary" type="submit"><i class="ph ph-play"></i>Run task</button>
-            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">Cancel</a>
+            {% endif %}
+            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">{{ 'Back to project' if cs else 'Cancel' }}</a>
         </div>
     </form>
     {% endfor %}

@@ -60,7 +60,7 @@ TASK_FORMATS = [
         "id": "source", "name": "Source enum", "icon": "ph ph-code",
         "hue": "#7fd8b0", "engine": "crawler + regex",
         "blurb": "Crawl a URL and grep every asset it serves for patterns you define.",
-        "coming_soon": False,
+        "coming_soon": True,
         "cmd_head": "sloth-src", "cmd_rest": "https://acme.example --depth 2 --rules secrets,endpoints",
         "fields": [
             {"name": "target", "label": "Start URL", "ph": "https://acme.example", "hint": "", "font": "mono", "span": "span 2"},

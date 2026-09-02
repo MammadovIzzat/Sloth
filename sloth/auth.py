@@ -315,10 +315,30 @@ def logout():
 
 @bp.route("/account", methods=["GET"])
 def account():
+    from . import tools
+    import shutil
     user = current_user()
     return render_template("account.html", nav_section="account", user=user,
                            min_length=MIN_PASSWORD_LENGTH,
-                           has_token=bool(user and user["api_token_hash"]))
+                           has_token=bool(user and user["api_token_hash"]),
+                           shodan_configured=tools.shodan_key_configured(),
+                           shodan_installed=bool(shutil.which("shodan")))
+
+
+@bp.route("/account/shodan-key", methods=["POST"])
+def shodan_key():
+    from . import tools
+    if request.form.get("remove"):
+        tools.set_shodan_key("")
+        flash("Shodan API key removed.", "ok")
+    else:
+        key = (request.form.get("api_key") or "").strip()
+        if not key:
+            flash("Paste a Shodan API key.", "error")
+        else:
+            tools.set_shodan_key(key)
+            flash("Shodan API key saved.", "ok")
+    return redirect(url_for("auth.account"))
 
 
 @bp.route("/account/password", methods=["POST"])

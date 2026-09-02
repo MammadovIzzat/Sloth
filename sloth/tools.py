@@ -7,6 +7,7 @@ dependency, with TLS verification relaxed because engagement targets routinely
 present self-signed or mismatched certificates.
 """
 import json
+import os
 import re
 import shutil
 import ssl
@@ -15,7 +16,40 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from .config import DATA_DIR
 from .engine import ScanError
+
+# The Shodan API key lives in its own file, not the shared results DB. Passed to
+# the shodan CLI via SHODAN_API_KEY, which it reads before its own config.
+SHODAN_KEY_FILE = os.path.join(DATA_DIR, "shodan_api.key")
+
+
+def get_shodan_key():
+    try:
+        with open(SHODAN_KEY_FILE) as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def set_shodan_key(key):
+    key = (key or "").strip()
+    if not key:
+        try:
+            os.remove(SHODAN_KEY_FILE)
+        except OSError:
+            pass
+        return
+    with open(SHODAN_KEY_FILE, "w") as fh:
+        fh.write(key)
+    try:
+        os.chmod(SHODAN_KEY_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def shodan_key_configured():
+    return bool(get_shodan_key())
 
 USER_AGENT = "sloth/2.4 (+security-testing)"
 _CTX = ssl.create_default_context()
@@ -84,8 +118,10 @@ def shodan_domain(domain, params=None, log=_noop):
     if not domain:
         raise ScanError("A domain is required.")
     if shutil.which("shodan") is None:
-        raise ScanError("The shodan CLI is not installed. `pipx install shodan` and "
-                        "`shodan init <API-KEY>`.")
+        raise ScanError("The shodan CLI is not installed. `pipx install shodan`.")
+    key = get_shodan_key()
+    if not key and not os.environ.get("SHODAN_API_KEY"):
+        raise ScanError("No Shodan API key configured. Add it under Account → Shodan API key.")
     limit = 100
     try:
         limit = max(1, min(1000, int(params.get("max_pages") or 5) * 100))
@@ -95,8 +131,11 @@ def shodan_domain(domain, params=None, log=_noop):
     query = f"hostname:{domain}"
     cmd = ["shodan", "search", "--fields", fields, "--limit", str(limit), query]
     log("$ " + " ".join(cmd))
+    env = os.environ.copy()
+    if key:
+        env["SHODAN_API_KEY"] = key
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
     except subprocess.TimeoutExpired:
         raise ScanError("shodan timed out.")
     if proc.returncode != 0:
@@ -152,7 +191,16 @@ _GRADES = ["F", "E", "D", "C", "B", "A", "A"]   # index by count present (0..6)
 
 def header_check(endpoints, params=None, log=_noop):
     """Fetch each endpoint and grade its security headers."""
-    urls = [u.strip() for u in (endpoints or []) if u.strip()]
+    urls = []
+    for u in (endpoints or []):
+        u = u.strip()
+        if not u:
+            continue
+        # A bare domain (megasec.az) is not a URL — default it to https so the
+        # fetch actually hits the site instead of failing with "no headers".
+        if not re.match(r"^https?://", u, re.I):
+            u = "https://" + u
+        urls.append(u)
     if not urls:
         raise ScanError("No web endpoints to check. Add some URLs, or run a host "
                         "scan first so this project has 443/8080 hosts to derive them from.")
