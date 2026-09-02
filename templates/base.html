@@ -84,10 +84,11 @@
             <div class="ctx-tree">
                 <div class="ctx-tree-h ellipsis">{{ current_project_name }}</div>
                 {% for t in sidebar_tasks %}
+                {% set tf = format_by_id.get(t['format'] or 'host', format_by_id['host']) %}
                 <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}"
                    class="ctx-task {{ 'on' if t['id'] == current_task_id }}">
-                    <div class="t"><i class="ph ph-crosshair" style="font-size:11px; margin-right:5px; opacity:.6"></i>{{ t['target'] }}</div>
-                    <div class="m">{{ t['host_count'] }} hosts · {{ t['finding_count'] }} ports</div>
+                    <div class="t"><i class="{{ tf['icon'] }}" style="font-size:11px; margin-right:5px; color:{{ tf['hue'] }}; opacity:.85"></i>{{ t['target'] }}</div>
+                    <div class="m">{% if tf['id'] != 'host' %}{{ tf['name']|lower }}{% else %}{{ t['host_count'] }} hosts · {{ t['finding_count'] }} ports{% endif %}</div>
                 </a>
                 {% endfor %}
                 <a href="{{ url_for('projects.new_task', project_id=current_project_id) }}"

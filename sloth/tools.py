@@ -33,6 +33,11 @@ def get_shodan_key():
 
 
 def set_shodan_key(key):
+    """Store the key and configure the shodan CLI with it.
+
+    The CLI reads its own config file (written by `shodan init`), not
+    SHODAN_API_KEY, so saving the key has to run init for the user — which also
+    validates the key against Shodan. Raises ScanError if init fails."""
     key = (key or "").strip()
     if not key:
         try:
@@ -40,6 +45,15 @@ def set_shodan_key(key):
         except OSError:
             pass
         return
+    if shutil.which("shodan") is None:
+        raise ScanError("The shodan CLI is not installed. `pipx install shodan`.")
+    try:
+        proc = subprocess.run(["shodan", "init", key], capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        raise ScanError("shodan init timed out — no network to Shodan?")
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise ScanError("shodan init rejected the key: " + (err[-1] if err else "unknown error"))
     with open(SHODAN_KEY_FILE, "w") as fh:
         fh.write(key)
     try:

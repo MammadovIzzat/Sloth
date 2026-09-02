@@ -161,10 +161,12 @@
             {% endfor %}
         </div>
 
+        {% if f['id'] != 'archive' %}
         <div class="cmd" style="margin-top:22px; width:100%; box-sizing:border-box">
             <span class="dollar">$</span><span class="tool" style="color:{{ f['hue'] }}">{{ f['cmd_head'] }}</span>
             <span class="muted" style="color:rgba(233,233,237,.72)">{{ f['cmd_rest'] }}</span>
         </div>
+        {% endif %}
 
         {% if f['needs_key'] %}
         <div style="display:flex; gap:10px; margin-top:16px; padding:11px 13px; border-radius:6px;

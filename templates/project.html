@@ -48,30 +48,37 @@
         <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ tasks|length }}</span>
     </div>
     {% for t in tasks %}
+    {% set tf = format_by_id.get(t['format'] or 'host', format_by_id['host']) %}
     <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}" class="lrow click"
        style="padding:14px 28px; gap:20px; align-items:center">
         <div style="flex:1; min-width:0">
             <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap">
+                <i class="{{ tf['icon'] }}" style="font-size:13px; color:{{ tf['hue'] }}"></i>
                 <span class="mono" style="font-size:14px">{{ t['target'] }}</span>
                 <span class="tag {{ tag_for.get(t['status'], 'tag-neutral') }}">{{ t['status'] }}</span>
             </div>
             <div class="mono" style="margin-top:5px; font-size:11.5px; color:rgba(233,233,237,.38)">
+                {%- if tf['id'] != 'host' -%}{{ tf['name']|lower }}
+                {%- else -%}
                 {{ t['engine'] if t['scan_type'] == 'full'
                    else {'quick':'nmap quick','discovery':'discovery'}.get(t['scan_type'], t['scan_type']) }}
                 {%- if t['discovery'] %} · 🔎 {{ t['discovery'] }}{% endif %}
                 {%- if t['tcp_ports'] %} · TCP {{ t['tcp_ports'] }}{% endif %}
                 {%- if t['udp_ports'] %} · UDP {{ t['udp_ports'] }}{% endif %}
                 {%- if t['top_ports'] %} · top {{ t['top_ports'] }}{% endif %}
+                {%- endif -%}
             </div>
             {% if t['error'] %}
             <div style="margin-top:4px; font-size:11.5px; color:#ffb4b6">{{ t['error'] }}</div>
             {% endif %}
         </div>
+        {% if tf['id'] == 'host' %}
         <div class="mono" style="flex:none; text-align:right; font-size:13px; line-height:1.6;
              color:{{ 'var(--color-text)' if t['finding_count'] else 'rgba(233,233,237,.3)' }}">
             <div>{{ t['host_count'] }} <span style="font-family:var(--font-body); font-size:11px; color:rgba(233,233,237,.32)">hosts</span></div>
             <div>{{ t['finding_count'] }} <span style="font-family:var(--font-body); font-size:11px; color:rgba(233,233,237,.32)">ports</span></div>
         </div>
+        {% endif %}
     </a>
     {% else %}
     <div style="padding:40px 28px; text-align:center"><p class="subline">No tasks yet. Add one to start scanning.</p></div>

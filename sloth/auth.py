@@ -336,8 +336,12 @@ def shodan_key():
         if not key:
             flash("Paste a Shodan API key.", "error")
         else:
-            tools.set_shodan_key(key)
-            flash("Shodan API key saved.", "ok")
+            from .engine import ScanError
+            try:
+                tools.set_shodan_key(key)
+                flash("Shodan API key saved and initialised.", "ok")
+            except ScanError as exc:
+                flash(str(exc), "error")
     return redirect(url_for("auth.account"))
 
 
