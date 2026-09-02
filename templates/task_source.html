@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_tool.html" as tool with context %}
+{% set fmt = format_by_id['source'] %}
+{% set sev_hue = {'high':'#ffb4b6', 'info':'#8ab2f5'} %}
+{% block title %}{{ task['target'] }} · source enum{% endblock %}
+
+{% block content %}
+{{ tool.head(task, fmt, task['target'], 'crawled for secrets, endpoints and source maps',
+             task['target'] ~ ' --depth ' ~ (params.get('depth') or '2') ~ ' --rules ' ~ (params.get('rules') or 'secrets,endpoints')) }}
+{% if result and result['rows'] %}
+<div class="results-bar">
+    <div class="csearch" style="flex:1 1 auto; max-width:380px">
+        <i class="ph ph-magnifying-glass"></i>
+        <input id="mFilter" type="search" autocomplete="off" placeholder="filter matches">
+    </div>
+    <span class="mono" style="font-size:11.5px; color:rgba(233,233,237,.42)">{{ result['count'] }} matches</span>
+</div>
+<div class="view-scroll">
+    <div class="colhead" style="gap:0"><span style="width:110px">Rule</span><span style="flex:1">Match</span><span style="width:260px">Asset</span></div>
+    {% for r in result['rows'] %}
+    {% set hue = sev_hue.get(r['severity'], '#8ab2f5') %}
+    <div class="lrow mrow" data-hay="{{ (r['match'] ~ ' ' ~ r['rule'] ~ ' ' ~ r['asset'])|lower }}"
+         style="padding:9px 24px; gap:14px; align-items:baseline; border-left:2px solid {{ hue }}">
+        <span class="mono" style="width:110px; font-size:11px; color:{{ hue }}">{{ r['rule'] }}</span>
+        <span class="mono" style="flex:1; min-width:0; font-size:12px; color:rgba(233,233,237,.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r['match'] }}</span>
+        <span class="mono" style="width:260px; font-size:10.5px; color:rgba(233,233,237,.32); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r['asset'] }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% else %}{{ tool.empty(task) }}{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ tool.scripts(task, autostart) }}
+<script>
+(function () {
+    var box = document.getElementById("mFilter"); if (!box) { return; }
+    var rows = [].slice.call(document.querySelectorAll(".mrow"));
+    box.addEventListener("input", function () {
+        var q = box.value.trim().toLowerCase();
+        rows.forEach(function (r) { r.style.display = (!q || r.dataset.hay.indexOf(q) !== -1) ? "" : "none"; });
+    });
+})();
+</script>
+{% endblock %}

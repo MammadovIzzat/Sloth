@@ -159,6 +159,12 @@ ADDED_COLUMNS = {
         # Which protocols a 'quick' nmap scan covers: tcp, udp or both. UDP
         # needs root, which this build has anyway.
         "quick_proto": "TEXT NOT NULL DEFAULT 'tcp'",
+        # Which tool a task runs. 'host' = the masscan/nmap port scan (scan_type
+        # still applies); 'shodan'/'archive'/'headers'/'source' are the other
+        # formats, whose inputs live in params_json and output in result_json.
+        "format": "TEXT NOT NULL DEFAULT 'host'",
+        "params_json": "TEXT",   # tool inputs (domain, url, options…) as JSON
+        "result_json": "TEXT",   # latest tool output as JSON, for non-host formats
     },
 }
 

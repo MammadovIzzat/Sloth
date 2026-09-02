@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_tool.html" as tool with context %}
+{% set fmt = format_by_id['archive'] %}
+{% block title %}{{ task['target'] }} · web archive{% endblock %}
+
+{% block content %}
+{{ tool.head(task, fmt, task['target'], 'every URL the archive has for this domain', task['target']) }}
+{% if result and result['rows'] %}
+<div class="results-bar">
+    <div class="csearch" style="flex:1 1 auto; max-width:380px">
+        <i class="ph ph-magnifying-glass"></i>
+        <input id="urlFilter" type="search" autocomplete="off" placeholder="filter — /admin, .sql, ?debug">
+    </div>
+    <span id="urlCount" class="mono" style="font-size:11.5px; color:rgba(233,233,237,.42)">{{ result['count'] }} urls</span>
+</div>
+<div class="view-scroll" id="urlScroll">
+    {% for r in result['rows'] %}
+    <div class="arow" data-url="{{ r['url']|lower }}"
+         style="display:flex; align-items:center; gap:10px; padding:5px 24px; border-bottom:1px solid rgba(233,233,237,.04)">
+        <a href="{{ r['url'] }}" target="_blank" rel="noreferrer" class="mono"
+           style="flex:1; min-width:0; font-size:12px; line-height:1.65; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:{{ '#ffb4b6' if r['interesting'] else 'rgba(233,233,237,.72)' }}">{{ r['url'] }}</a>
+        {% if r['interesting'] %}<span style="flex:none; font-size:10.5px; color:#ffb4b6">interesting</span>
+        {% elif r['query'] %}<span style="flex:none; font-size:10.5px; color:rgba(233,233,237,.3)">?query</span>{% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}{{ tool.empty(task) }}{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ tool.scripts(task, autostart) }}
+<script>
+(function () {
+    var box = document.getElementById("urlFilter"); if (!box) { return; }
+    var rows = [].slice.call(document.querySelectorAll(".arow"));
+    var count = document.getElementById("urlCount");
+    box.addEventListener("input", function () {
+        var q = box.value.trim().toLowerCase(), n = 0;
+        rows.forEach(function (r) { var hit = !q || r.dataset.url.indexOf(q) !== -1;
+            r.style.display = hit ? "" : "none"; if (hit) { n++; } });
+        count.textContent = n + " urls";
+    });
+})();
+</script>
+{% endblock %}

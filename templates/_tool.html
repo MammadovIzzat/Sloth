@@ -1,0 +1,62 @@
+{# Shared chrome for the tool-task result pages (shodan/archive/headers/source). #}
+{% macro head(task, fmt, title, sub, cmd_rest) %}
+<div class="vhead" style="padding:12px 22px 0">
+    <div class="crumb">
+        <a href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}">{{ task['project_name'] }}</a>
+        <span class="sep">/</span>
+        <span style="display:inline-flex; align-items:center; gap:5px; color:{{ fmt['hue'] }}">
+            <i class="{{ fmt['icon'] }}" style="font-size:13px"></i>{{ fmt['name']|lower }}</span>
+        <span id="statusLine" style="margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+              font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:rgba(233,233,237,.5)">
+            <span id="statusDot" class="dot2"></span><span id="statusText">{{ task['status'] }}</span></span>
+    </div>
+    <div style="display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap">
+        <div style="flex:1 1 420px; min-width:0">
+            <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap">
+                <h1 class="h1-mono" style="font-size:22px">{{ title }}</h1>
+                <span style="font-size:13px; color:rgba(233,233,237,.45)">{{ sub }}</span>
+            </div>
+            <div class="cmd" style="margin-top:9px">
+                <span class="dollar">$</span>
+                <span class="tool" style="color:{{ fmt['hue'] }}">{{ fmt['cmd_head'] }}</span>
+                <span class="muted" style="color:rgba(233,233,237,.72)">{{ cmd_rest }}</span>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; flex:none; padding-top:4px">
+            <button id="runBtn" class="cbtn {{ 'hidden' if task['status'] == 'running' }}"><i class="ph ph-arrows-clockwise"></i>{{ 'Run' if not task['result_json'] else 'Re-run' }}</button>
+            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}"><i class="ph ph-arrow-left"></i>Project</a>
+        </div>
+    </div>
+    {% if result and result['metrics'] %}
+    <div class="band">
+        {% for m in result['metrics'] %}
+        <div class="band-cell" style="border-bottom-color:{{ m['hue'] }}">
+            <div class="band-n" style="color:{{ m['hue'] }}">{{ m['v'] }}</div>
+            <div class="band-label">{{ m['label'] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro empty(task) %}
+<div style="padding:56px 28px; text-align:center">
+    {% if task['status'] == 'running' %}
+    <p class="subline"><span class="dot2 live" style="background:#e0a03a; display:inline-block"></span>
+       Running — results will appear when it finishes.</p>
+    {% elif task['status'] == 'error' %}
+    <p class="subline" style="color:#ffb4b6">{{ task['error'] or 'The task failed. See the log.' }}</p>
+    {% else %}
+    <p class="subline">No results yet. Press <b>Run</b>.</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro scripts(task, autostart) %}
+<script>
+window.TOOLTASK = { id: {{ task['id']|tojson }}, status: {{ task['status']|tojson }},
+    autostart: {{ autostart|tojson }}, csrf: {{ csrf_token()|tojson }} };
+</script>
+<script src="{{ url_for('static', filename='js/tooltask.js', v=asset_version) }}"></script>
+{% endmacro %}

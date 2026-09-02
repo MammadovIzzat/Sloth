@@ -13,20 +13,23 @@
 <body>
 
 {% if not current_user() %}
-    {# Signed out: full-screen split, form on the left. #}
-    <div class="auth">
-        <div class="auth-form">
-            <a href="{{ url_for('projects.index') }}" class="brand brand-lg">
-                <img class="brand-logo brand-logo-lg" style="width:60px;height:60px"
-                     src="{{ url_for('static', filename='img/logo.png') }}" alt="">
-                <span class="brand-word">sloth</span>
-            </a>
-            {% include "_flash.html" %}
-            {% block auth_content %}{% endblock %}
+    {# Signed out: full-height centred card, top bar and a warning foot. #}
+    <div class="authv">
+        <div class="authv-top">
+            <img src="{{ url_for('static', filename='img/logo-small.png') }}" alt="" style="width:22px;height:22px">
+            <span class="brand-word">sloth</span>
+            <span class="authv-ver">v{{ app_version }}</span>
+            <span class="authv-host"><span class="dot2"></span>127.0.0.1:9998</span>
         </div>
-        <div class="auth-aside">
-            <p>Discovery first, then only the hosts that answered — everything
-               accumulates, nothing is replaced</p>
+        <div class="authv-body">
+            <div class="authv-card">
+                {% include "_flash.html" %}
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
+        <div class="authv-foot">
+            <i class="ph ph-warning" style="font-size:14px; color:#f0c076"></i>
+            <span>running as root · raw sockets · keep bound to localhost</span>
         </div>
     </div>
 {% else %}

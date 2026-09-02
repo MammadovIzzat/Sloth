@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "_tool.html" as tool with context %}
+{% set fmt = format_by_id['headers'] %}
+{% block title %}Header check · {{ task['project_name'] }}{% endblock %}
+
+{% block content %}
+{{ tool.head(task, fmt, (result['count'] ~ ' web endpoints') if result else 'header check',
+             "from this project's web hosts", '--max-time 10 --follow < endpoints.txt') }}
+{% if result and result['rows'] %}
+<div class="view-scroll">
+    <div style="min-width:820px">
+        <div class="colhead" style="align-items:flex-end; gap:0">
+            <span style="flex:1">Endpoint</span>
+            {% for c in result['cols'] %}<span style="width:80px; text-align:center; line-height:1.3">{{ c }}</span>{% endfor %}
+            <span style="width:64px; text-align:right">Grade</span>
+        </div>
+        {% for r in result['rows'] %}
+        <div class="lrow" style="min-width:820px; padding:10px 24px; gap:0">
+            <div style="flex:1; min-width:0">
+                <div class="mono" style="font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r['url'] }}</div>
+                <div style="margin-top:2px; font-size:11px; color:rgba(233,233,237,.32)">{{ r['server'] }}</div>
+            </div>
+            {% for c in r['cells'] %}
+            <span style="width:80px; display:flex; justify-content:center">
+                <span title="{{ c['title'] }}" class="mono" style="min-width:26px; padding:2px 6px; text-align:center; border-radius:4px; font-size:11px;
+                      color:{{ '#7fd8b0' if c['ok'] else '#ffb4b6' }}; background:{{ 'color-mix(in srgb,#3fb984 14%,transparent)' if c['ok'] else 'color-mix(in srgb,#f2555a 14%,transparent)' }}">{{ c['mark'] }}</span>
+            </span>
+            {% endfor %}
+            <span class="mono" style="width:64px; text-align:right; font-size:15px; color:{{ r['gradeHue'] }}">{{ r['grade'] }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}{{ tool.empty(task) }}{% endif %}
+{% endblock %}
+
+{% block scripts %}{{ tool.scripts(task, autostart) }}{% endblock %}

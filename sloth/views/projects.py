@@ -1,8 +1,11 @@
 """Project and task management: the entry point into the tool."""
+import json
+
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    url_for)
 
 from .. import store
+from ..formats import FORMAT_BY_ID
 from ..config import (DEFAULT_DISCOVERY, DEFAULT_ENGINE, DEFAULT_RATE,
                       DEFAULT_RETRIES, DEFAULT_TCP_PORTS, DEFAULT_TOP_PORTS,
                       DEFAULT_UDP_PORTS)
@@ -121,13 +124,18 @@ def delete_project(project_id):
 def create_task(project_id):
     if store.get_project(project_id) is None:
         abort(404)
+    fmt = request.form.get("format", "host")
     try:
-        task_id = _create_task_from_form(project_id, request.form)
+        if fmt != "host":
+            task_id = _create_tool_task(project_id, fmt, request.form)
+        else:
+            task_id = _create_task_from_form(project_id, request.form)
     except (ScanError, ValueError) as exc:
         flash(str(exc), "error")
-        return redirect(url_for("projects.project_detail", project_id=project_id))
+        return redirect(url_for("projects.new_task", project_id=project_id, tool=fmt))
 
-    if request.form.get("start_now"):
+    # Tool tasks always run on create — they're quick and have nothing to configure.
+    if request.form.get("start_now") or fmt != "host":
         return redirect(url_for("scan.task_detail", task_id=task_id, autostart=1))
     return redirect(url_for("scan.task_detail", task_id=task_id))
 
@@ -154,6 +162,26 @@ def delete_task(task_id):
     store.delete_task(task_id)
     flash("Task deleted.", "ok")
     return redirect(url_for("projects.project_detail", project_id=project_id))
+
+
+def _create_tool_task(project_id, fmt, form):
+    """A non-host task: the primary input becomes the target, the rest is stored
+    as params_json for the runner. No masscan config involved."""
+    if fmt not in FORMAT_BY_ID:
+        raise ValueError(f"Unknown task format: {fmt}")
+    target = (form.get("target") or "").strip()
+    if fmt != "headers" and not target:
+        raise ValueError("This task needs a domain or URL.")
+    # Everything except the reserved fields is a tool parameter.
+    reserved = {"_csrf", "format", "name", "target", "start_now"}
+    params = {k: v for k, v in form.items() if k not in reserved}
+    label = FORMAT_BY_ID[fmt]["name"]
+    default_name = (target or label) + f" · {label.lower()}"
+    return store.create_task(
+        project_id, target or label,
+        name=(form.get("name") or "").strip() or default_name,
+        format=fmt, params_json=json.dumps(params),
+    )
 
 
 def _create_task_from_form(project_id, form):

@@ -2,28 +2,44 @@
 {% block title %}First-run setup · Sloth{% endblock %}
 
 {% block auth_content %}
-<div style="max-width:360px">
-    <h1 class="h1" style="font-size:25px; margin-bottom:6px">Create your account</h1>
-    <p class="subline" style="margin:0 0 26px; line-height:1.7; max-width:44ch">
-        No account exists yet. Create one now — there is deliberately no default password,
-        so nothing is left open by accident.</p>
-
-    <form method="post" style="display:flex; flex-direction:column; gap:14px">
-        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <div>
-            <label class="cfield-label" for="su-u">Username</label>
-            <input id="su-u" class="cinput" name="username" autocomplete="username" autofocus required>
-        </div>
-        <div>
-            <label class="cfield-label" for="su-p">Password</label>
-            <input id="su-p" class="cinput" name="password" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
-            <div style="margin-top:6px; font-size:11.5px; color:rgba(233,233,237,.38)">At least {{ min_length }} characters. Stored as a scrypt hash.</div>
-        </div>
-        <div>
-            <label class="cfield-label" for="su-c">Confirm password</label>
-            <input id="su-c" class="cinput" name="confirm" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
-        </div>
-        <button class="cbtn cbtn-primary" type="submit" style="justify-content:center; margin-top:4px; padding:9px">Create account</button>
-    </form>
+<div style="display:flex; align-items:baseline; gap:9px">
+    <h1 style="margin:0; font-family:var(--font-heading); font-size:21px; font-weight:500; letter-spacing:-.02em">Create your account</h1>
+    <span class="mono" style="font-size:11px; color:#7fd8b0">first run</span>
 </div>
+<p style="margin:7px 0 0; font-size:12.5px; line-height:1.7; color:rgba(233,233,237,.45)">
+    No account exists yet — there is deliberately no default password, so nothing is left open by accident.</p>
+
+<form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="authfields">
+        <div class="authrow">
+            <label for="su-u">Username</label>
+            <input id="su-u" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="authrow">
+            <label for="su-p">Password</label>
+            <input id="su-p" name="password" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
+            <button type="button" class="eye" data-eye="su-p"><i class="ph ph-eye"></i></button>
+        </div>
+        <div class="authrow">
+            <label for="su-c">Confirm</label>
+            <input id="su-c" name="confirm" type="password" autocomplete="new-password" minlength="{{ min_length }}" required>
+        </div>
+    </div>
+    <div style="margin-top:12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; color:rgba(233,233,237,.4)">
+        at least {{ min_length }} characters · stored as a scrypt hash</div>
+    <button class="authcta" type="submit">Create account</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-eye]").forEach(function (b) {
+    b.addEventListener("click", function () {
+        var i = document.getElementById(b.dataset.eye);
+        i.type = i.type === "password" ? "text" : "password";
+        b.querySelector("i").className = i.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
+    });
+});
+</script>
 {% endblock %}

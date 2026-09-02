@@ -122,42 +122,33 @@
         </form>
     </div>
 
-    {# ── the coming-soon formats: previews from the registry ── #}
-    {% for f in task_formats if f['coming_soon'] %}
-    <div class="tool-panel hidden" data-tool="{{ f['id'] }}">
+    {# ── the other tool formats ── #}
+    {% for f in task_formats if f['id'] != 'host' %}
+    <form class="tool-panel hidden" data-tool="{{ f['id'] }}" method="post"
+          action="{{ url_for('projects.create_task', project_id=project['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="format" value="{{ f['id'] }}">
         <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:16px">
             <span class="seclabel">{{ f['name'] }} task</span>
             <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ f['engine'] }}</span>
-            <span class="badge-state" style="margin-left:auto; color:{{ f['hue'] }}; background:color-mix(in srgb, {{ f['hue'] }} 14%, transparent); border:1px solid color-mix(in srgb, {{ f['hue'] }} 40%, transparent)">coming soon</span>
         </div>
 
-        <div style="display:flex; gap:10px; margin-bottom:20px; padding:11px 13px; border-radius:6px;
-             border:1px solid color-mix(in srgb, {{ f['hue'] }} 30%, transparent); background:color-mix(in srgb, {{ f['hue'] }} 7%, transparent)">
-            <i class="ph ph-hammer" style="font-size:15px; color:{{ f['hue'] }}; margin-top:1px"></i>
-            <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.6)">
-                This tool isn't built yet — it's next on the list. Here's the shape it will take.</p>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px; opacity:.6; pointer-events:none">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px">
             {% for fld in f['fields'] %}
             <div style="grid-column:{{ fld['span'] }}; min-width:0">
-                <label class="cfield-label">{{ fld['label'] }}</label>
-                <input class="cinput {{ 'mono' if fld['font'] == 'mono' }}" value="{{ fld['ph'].format(version=app_version) if '{version}' in fld['ph'] else fld['ph'] }}" disabled>
+                <label class="cfield-label" for="{{ f['id'] }}-{{ fld['name'] }}">{{ fld['label'] }}</label>
+                {% set ph = fld['ph'].format(version=app_version) if '{version}' in fld['ph'] else fld['ph'] %}
+                {% if fld.get('textarea') %}
+                <textarea id="{{ f['id'] }}-{{ fld['name'] }}" name="{{ fld['name'] }}" rows="3"
+                          class="cinput" placeholder="{{ ph }}"></textarea>
+                {% else %}
+                <input id="{{ f['id'] }}-{{ fld['name'] }}" name="{{ fld['name'] }}"
+                       class="cinput {{ 'mono' if fld['font'] == 'mono' }}" placeholder="{{ ph }}">
+                {% endif %}
                 {% if fld['hint'] %}<div style="margin-top:5px; font-size:11px; color:rgba(233,233,237,.35)">{{ fld['hint'] }}</div>{% endif %}
             </div>
             {% endfor %}
         </div>
-
-        {% if f['opts'] %}
-        <div style="margin-top:22px">
-            <div class="seclabel" style="margin-bottom:10px">Options</div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px; opacity:.6">
-                {% for o in f['opts'] %}
-                <span class="badge-state" style="color:rgba(233,233,237,.6); background:rgba(233,233,237,.06); border:1px solid var(--color-divider); padding:4px 11px">{{ o }}</span>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
 
         <div class="cmd" style="margin-top:22px; width:100%; box-sizing:border-box">
             <span class="dollar">$</span><span class="tool" style="color:{{ f['hue'] }}">{{ f['cmd_head'] }}</span>
@@ -173,10 +164,10 @@
         {% endif %}
 
         <div style="display:flex; gap:8px; margin-top:26px">
-            <button class="cbtn cbtn-primary" type="button" disabled style="opacity:.5; cursor:not-allowed"><i class="ph ph-play"></i>Run task</button>
-            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">Back to project</a>
+            <button class="cbtn cbtn-primary" type="submit"><i class="ph ph-play"></i>Run task</button>
+            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">Cancel</a>
         </div>
-    </div>
+    </form>
     {% endfor %}
     </div>
 </div>

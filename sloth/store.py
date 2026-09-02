@@ -150,17 +150,18 @@ def get_or_create_project(name, description=None):
 def create_task(project_id, target, name=None, tcp_ports=None, udp_ports=None,
                 rate=None, notes=None, scan_type="full", discovery=None,
                 top_ports=None, retries=None, wait=None, engine="masscan",
-                quick_proto="tcp"):
+                quick_proto="tcp", format="host", params_json=None):
     tid = new_id()
     conn = connect()
     try:
         conn.execute(
             "INSERT INTO tasks (id, project_id, name, target, tcp_ports, udp_ports, rate,"
             " status, created_at, notes, scan_type, discovery, top_ports, retries, wait,"
-            " engine, quick_proto) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " engine, quick_proto, format, params_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (tid, project_id, (name or "").strip() or target, target,
              tcp_ports, udp_ports, rate, "pending", now(), notes,
-             scan_type, discovery, top_ports, retries, wait, engine, quick_proto),
+             scan_type, discovery, top_ports, retries, wait, engine, quick_proto,
+             format, params_json),
         )
         conn.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now(), project_id))
         conn.commit()
@@ -173,7 +174,7 @@ def update_task(task_id, **fields):
     allowed = {"name", "status", "progress", "started_at", "finished_at",
                "error", "notes", "resumable", "tcp_ports", "udp_ports", "rate",
                "scan_type", "discovery", "top_ports", "retries", "wait", "engine",
-               "quick_proto"}
+               "quick_proto", "format", "params_json", "result_json"}
     sets = {k: v for k, v in fields.items() if k in allowed}
     if not sets:
         return

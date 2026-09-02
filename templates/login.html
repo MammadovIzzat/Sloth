@@ -2,29 +2,37 @@
 {% block title %}Sign in · Sloth{% endblock %}
 
 {% block auth_content %}
-<div style="max-width:360px">
-    <h1 class="h1" style="font-size:25px; margin-bottom:6px">Sign in</h1>
-    <p class="subline" style="margin:0 0 26px; line-height:1.7; max-width:44ch">Sign in to continue.</p>
-
-    <form method="post" style="display:flex; flex-direction:column; gap:14px">
-        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-        <div>
-            <label class="cfield-label" for="lg-u">Username</label>
-            <input id="lg-u" class="cinput" name="username" autocomplete="username" autofocus required>
-        </div>
-        <div>
-            <label class="cfield-label" for="lg-p">Password</label>
-            <input id="lg-p" class="cinput" name="password" type="password" autocomplete="current-password" required>
-        </div>
-        <button class="cbtn cbtn-primary" type="submit" style="justify-content:center; margin-top:4px; padding:9px">Sign in</button>
-    </form>
-
-    <div style="display:flex; gap:10px; margin-top:26px; padding:11px 13px; border-radius:6px;
-         border:1px solid color-mix(in srgb,#e0a03a 30%,transparent); background:color-mix(in srgb,#e0a03a 7%,transparent)">
-        <i class="ph ph-warning" style="font-size:15px; color:#f0c076; margin-top:1px"></i>
-        <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.55); max-width:42ch">
-            This tool runs as root and drives raw-socket scanners. Keep it bound to localhost unless you have a reason not to.</p>
-    </div>
+<div style="display:flex; align-items:baseline; gap:9px">
+    <h1 style="margin:0; font-family:var(--font-heading); font-size:21px; font-weight:500; letter-spacing:-.02em">Sign in</h1>
 </div>
+<p style="margin:7px 0 0; font-size:12.5px; line-height:1.7; color:rgba(233,233,237,.45)">Sign in to continue.</p>
+
+<form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+    <div class="authfields">
+        <div class="authrow">
+            <label for="lg-u">Username</label>
+            <input id="lg-u" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="authrow">
+            <label for="lg-p">Password</label>
+            <input id="lg-p" name="password" type="password" autocomplete="current-password" required>
+            <button type="button" class="eye" data-eye="lg-p"><i class="ph ph-eye"></i></button>
+        </div>
+    </div>
+    <button class="authcta" type="submit">Sign in</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-eye]").forEach(function (b) {
+    b.addEventListener("click", function () {
+        var i = document.getElementById(b.dataset.eye);
+        i.type = i.type === "password" ? "text" : "password";
+        b.querySelector("i").className = i.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
+    });
+});
+</script>
 {% endblock %}

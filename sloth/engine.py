@@ -10,6 +10,7 @@ Results go to SQLite as they arrive, so a browser refresh (or a server restart)
 no longer loses the scan.
 """
 import errno
+import json
 import os
 import queue
 import re
@@ -342,6 +343,9 @@ class ScanManager:
         task = store.get_task(task_id)
         if task is None:
             raise ScanError("Task not found.")
+        fmt = task["format"] if "format" in task.keys() else "host"
+        if fmt and fmt != "host":
+            return self._start_tool(task)
         _check_requirements(task)
 
         with self._lock:
@@ -363,6 +367,78 @@ class ScanManager:
             self._threads[task_id] = thread
         thread.start()
         self.ensure_watchdog()
+        return thread
+
+    def _derive_endpoints(self, project_id):
+        """Web endpoints for a header-check with no explicit list: the project's
+        hosts with a web port open, as http/https URLs."""
+        eps = []
+        for h in store.project_hosts(project_id):
+            for p in h["ports"]:
+                port = p["port"]
+                if port in (443, 8443):
+                    eps.append(f"https://{h['ip']}" + ("" if port == 443 else f":{port}"))
+                elif port in (80, 8080, 8000, 8008):
+                    eps.append(f"http://{h['ip']}" + ("" if port == 80 else f":{port}"))
+        return sorted(set(eps))
+
+    def _start_tool(self, task):
+        """Run a non-host task format (shodan/archive/headers/source) in a thread.
+
+        These are lightweight HTTP/CLI tools, not link-saturating sweeps, so they
+        don't take the single-scan lock — they just report on their own stream and
+        store their output as result_json."""
+        from . import tools
+        task_id = task["id"]
+        fmt = task["format"]
+        with self._lock:
+            existing = self._threads.get(task_id)
+            if existing and existing.is_alive():
+                raise ScanBusy("This task is already running.")
+
+        store.update_task(task_id, status="running", started_at=now(),
+                          finished_at=None, error=None, progress=0.0)
+        self.publish(task_id, {"type": "status", "status": "running"})
+
+        def worker():
+            params = {}
+            try:
+                params = json.loads(task["params_json"] or "{}")
+            except (TypeError, ValueError):
+                params = {}
+            try:
+                runner = tools.RUNNERS.get(fmt)
+                if runner is None:
+                    raise ScanError(f"Unknown task format: {fmt}")
+                self.log(task_id, f"Starting {fmt} task.")
+                if fmt == "headers":
+                    raw = (params.get("endpoints") or "").strip()
+                    eps = [ln.strip() for ln in raw.splitlines() if ln.strip()] \
+                        if raw else self._derive_endpoints(task["project_id"])
+                    result = runner(eps, params, log=lambda ln: self.log(task_id, ln))
+                else:
+                    result = runner(task["target"], params, log=lambda ln: self.log(task_id, ln))
+                store.update_task(task_id, result_json=json.dumps(result),
+                                  status="completed", finished_at=now(), progress=100.0)
+                self.log(task_id, f"Done — {result.get('count', 0)} result(s).")
+                self.publish(task_id, {"type": "done", "status": "completed"})
+            except (ScanError, OSError) as exc:
+                store.update_task(task_id, status="error", error=str(exc), finished_at=now())
+                self.log(task_id, "[!] " + str(exc))
+                self.publish(task_id, {"type": "done", "status": "error", "error": str(exc)})
+            except Exception as exc:                       # noqa: BLE001 - shown in UI
+                msg = f"{type(exc).__name__}: {exc}"
+                store.update_task(task_id, status="error", error=msg, finished_at=now())
+                self.log(task_id, "[!] " + msg)
+                self.publish(task_id, {"type": "done", "status": "error", "error": msg})
+            finally:
+                with self._lock:
+                    self._threads.pop(task_id, None)
+
+        thread = threading.Thread(target=worker, name=f"tool-{task_id}", daemon=True)
+        with self._lock:
+            self._threads[task_id] = thread
+        thread.start()
         return thread
 
     def pause(self, task_id):

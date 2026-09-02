@@ -145,8 +145,9 @@ def create_app():
     app.jinja_env.globals["surface_summary"] = surface_summary
     app.jinja_env.globals["app_version"] = __version__
 
-    from .formats import TASK_FORMATS
+    from .formats import TASK_FORMATS, FORMAT_BY_ID
     app.jinja_env.globals["task_formats"] = TASK_FORMATS
+    app.jinja_env.globals["format_by_id"] = FORMAT_BY_ID
 
     @app.before_request
     def _check_csrf():

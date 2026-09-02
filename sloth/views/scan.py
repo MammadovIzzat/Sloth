@@ -22,6 +22,30 @@ def task_detail(task_id):
     task = store.get_task(task_id)
     if task is None:
         abort(404)
+
+    fmt = task["format"] if "format" in task.keys() else "host"
+    if fmt and fmt != "host":
+        try:
+            result = json.loads(task["result_json"]) if task["result_json"] else None
+        except (TypeError, ValueError):
+            result = None
+        try:
+            params = json.loads(task["params_json"]) if task["params_json"] else {}
+        except (TypeError, ValueError):
+            params = {}
+        return render_template(
+            f"task_{fmt}.html",
+            nav_section="projects",
+            current_project_id=task["project_id"],
+            current_project_name=task["project_name"],
+            current_task_id=task_id,
+            sidebar_tasks=store.list_tasks(task["project_id"]),
+            task=task, result=result, params=params,
+            is_active=(manager.active_task == task_id),
+            scan_log=read_log(task_id),
+            autostart=bool(request.args.get("autostart")),
+        )
+
     return render_template(
         "task.html",
         nav_section="projects",
@@ -64,6 +88,17 @@ def start_task(task_id):
     payload = request.get_json(silent=True) or {}
     resume = (request.args.get("resume") or "").lower() in ("1", "true", "yes")
     resume = resume or bool(payload.get("resume"))
+
+    # Tool tasks (shodan/archive/headers/source) carry no scan config — just run.
+    fmt = task["format"] if "format" in task.keys() else "host"
+    if fmt and fmt != "host":
+        try:
+            manager.start(task_id)
+        except ScanBusy as exc:
+            return jsonify({"error": str(exc), "busy": True}), 409
+        except ScanError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify({"status": "started", "task_id": task_id})
 
     if not resume and payload:
         # Persist the chosen settings so the page, the log and a later re-run all
