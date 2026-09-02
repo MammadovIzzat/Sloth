@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}New task · {{ project['name'] }}{% endblock %}
+
+{% block content %}
+<div class="vhead" style="padding:14px 26px 0">
+    <div class="crumb">
+        <a href="{{ url_for('projects.project_detail', project_id=project['id']) }}">{{ project['name'] }}</a>
+        <span class="sep">/</span><span>New task</span>
+    </div>
+    <h1 class="h1">New task</h1>
+    <p class="subline">Five tools, one project. Findings from all of them accumulate against the same hosts.</p>
+
+    <div class="tool-picker" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+         margin-top:14px; border-top:1px solid var(--color-divider)">
+        {% for f in task_formats %}
+        <button type="button" class="tool-pick" data-tool="{{ f['id'] }}"
+                style="min-width:0; padding:10px 13px 9px; cursor:pointer; text-align:left; background:transparent;
+                       border:0; border-right:1px solid var(--color-divider); border-bottom:2px solid transparent"
+                data-hue="{{ f['hue'] }}">
+            <div style="display:flex; align-items:center; gap:8px">
+                <i class="{{ f['icon'] }}" style="font-size:16px; color:{{ f['hue'] }}"></i>
+                <span style="font-size:13px; color:rgba(233,233,237,.6)" class="tool-pick-name">{{ f['name'] }}</span>
+                {% if f['coming_soon'] %}<span class="badge-state" style="margin-left:auto; font-size:9.5px; padding:0 6px; color:rgba(233,233,237,.5); background:rgba(233,233,237,.08)">soon</span>{% endif %}
+            </div>
+            <div style="margin-top:6px; font-size:11px; line-height:1.45; color:rgba(233,233,237,.38)">{{ f['blurb'] }}</div>
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="view-scroll" style="padding:22px 28px 40px">
+    <div style="max-width:min(660px, 100%)">
+
+    {# ── Host scan: the real, working task form ── #}
+    <div class="tool-panel" data-tool="host">
+        <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:16px">
+            <span class="seclabel">Host scan task</span>
+            <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">masscan → nmap</span>
+        </div>
+        <form method="post" data-scan-form action="{{ url_for('projects.create_task', project_id=project['id']) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px">
+                <div style="grid-column:span 2">
+                    <label class="cfield-label" for="nt-target">Target (IP, CIDR or range)</label>
+                    <input id="nt-target" class="cinput mono" name="target" placeholder="10.0.0.0/24 or 10.0.0.5-10.0.0.90" required>
+                </div>
+                <div style="grid-column:span 2">
+                    <label class="cfield-label" for="nt-name">Task name</label>
+                    <input id="nt-name" class="cinput" name="name" placeholder="defaults to the target">
+                </div>
+                <div>
+                    <label class="cfield-label" for="nt-type">Scan type</label>
+                    <select id="nt-type" class="cinput" name="scan_type" data-scan-type>
+                        {% for key, label in scan_types.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <p class="cfield-label" data-type-help style="margin-top:5px; color:rgba(233,233,237,.35)"></p>
+                </div>
+                <div data-when="full">
+                    <label class="cfield-label" for="nt-engine">Engine</label>
+                    <select id="nt-engine" class="cinput" name="engine" data-scan-engine>
+                        {% for key, meta in engines.items() %}<option value="{{ key }}" {{ 'selected' if key == defaults['engine'] }} data-note="{{ meta['note'] }}">{{ meta['label'] }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top:16px">
+                <label class="cfield-label" for="nt-disc">Host discovery</label>
+                <select id="nt-disc" class="cinput" name="discovery" data-scan-discovery>
+                    <option value="">None — scan every address in the range</option>
+                    {% for p in discovery_profiles %}<option value="{{ p['key'] }}" {{ 'selected' if p['key'] == defaults['discovery'] }}
+                        data-note="{{ p['description'] }}" data-tool="{{ p['tool'] }}" data-local="{{ 1 if p['local_only'] else 0 }}">{{ p['label'] }}</option>{% endfor %}
+                </select>
+                <p class="cfield-label" data-discovery-help style="margin-top:5px; color:rgba(233,233,237,.35)"></p>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:16px" data-when="full">
+                <div><label class="cfield-label" for="nt-tcp">TCP ports</label>
+                    <input id="nt-tcp" class="cinput mono" name="tcp_ports" value="{{ defaults['tcp'] }}"></div>
+                <div><label class="cfield-label" for="nt-udp">UDP ports</label>
+                    <input id="nt-udp" class="cinput mono" name="udp_ports" placeholder="blank = skip"></div>
+            </div>
+
+            <div data-when="quick">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:16px">
+                    <div><label class="cfield-label" for="nt-proto">Protocol</label>
+                        <select id="nt-proto" class="cinput" name="quick_proto">
+                            {% for key, label in quick_protocols.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                        </select></div>
+                    <div><label class="cfield-label" for="nt-top">Top ports</label>
+                        <input id="nt-top" class="cinput mono" name="top_ports" type="number" min="1" max="65535" value="{{ defaults['top_ports'] }}"></div>
+                </div>
+                <div style="margin-top:16px"><label class="cfield-label" for="nt-np">Or an explicit range</label>
+                    <input id="nt-np" class="cinput mono" name="nmap_ports" placeholder="e.g. 1-65535 — overrides top ports"></div>
+            </div>
+
+            <div data-when="full" data-engine="masscan">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:16px">
+                    <div><label class="cfield-label" for="nt-rate">Rate (pkts/s)</label>
+                        <input id="nt-rate" class="cinput mono" name="rate" type="number" min="100" value="{{ defaults['rate'] }}"></div>
+                    <div><label class="cfield-label" for="nt-retries">Retries</label>
+                        <input id="nt-retries" class="cinput mono" name="retries" type="number" min="0" max="10" value="{{ defaults['retries'] }}"></div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:16px">
+                <div><label class="cfield-label" for="nt-octet">Start IP (last octet)</label>
+                    <input id="nt-octet" class="cinput mono" name="start_octet" type="number" min="1" max="254" placeholder="optional"></div>
+            </div>
+            <div style="margin-top:16px"><label class="cfield-label" for="nt-notes">Notes</label>
+                <textarea id="nt-notes" class="cinput" name="notes" rows="2" placeholder="scope notes for this task"></textarea></div>
+
+            <div class="cmd" style="margin-top:20px; width:100%; box-sizing:border-box">
+                <span class="dollar">$</span><span class="tool">masscan</span>
+                <span class="muted" style="color:rgba(233,233,237,.72)">&lt;target&gt; -p&lt;ports&gt; --rate &lt;rate&gt;</span>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:24px">
+                <button class="cbtn cbtn-primary" type="submit" name="start_now" value="1"><i class="ph ph-play"></i>Run task</button>
+                <button class="cbtn" type="submit">Save without running</button>
+                <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    {# ── the coming-soon formats: previews from the registry ── #}
+    {% for f in task_formats if f['coming_soon'] %}
+    <div class="tool-panel hidden" data-tool="{{ f['id'] }}">
+        <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:16px">
+            <span class="seclabel">{{ f['name'] }} task</span>
+            <span class="mono" style="font-size:11px; color:rgba(233,233,237,.28)">{{ f['engine'] }}</span>
+            <span class="badge-state" style="margin-left:auto; color:{{ f['hue'] }}; background:color-mix(in srgb, {{ f['hue'] }} 14%, transparent); border:1px solid color-mix(in srgb, {{ f['hue'] }} 40%, transparent)">coming soon</span>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:20px; padding:11px 13px; border-radius:6px;
+             border:1px solid color-mix(in srgb, {{ f['hue'] }} 30%, transparent); background:color-mix(in srgb, {{ f['hue'] }} 7%, transparent)">
+            <i class="ph ph-hammer" style="font-size:15px; color:{{ f['hue'] }}; margin-top:1px"></i>
+            <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.6)">
+                This tool isn't built yet — it's next on the list. Here's the shape it will take.</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px 18px; opacity:.6; pointer-events:none">
+            {% for fld in f['fields'] %}
+            <div style="grid-column:{{ fld['span'] }}; min-width:0">
+                <label class="cfield-label">{{ fld['label'] }}</label>
+                <input class="cinput {{ 'mono' if fld['font'] == 'mono' }}" value="{{ fld['ph'].format(version=app_version) if '{version}' in fld['ph'] else fld['ph'] }}" disabled>
+                {% if fld['hint'] %}<div style="margin-top:5px; font-size:11px; color:rgba(233,233,237,.35)">{{ fld['hint'] }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if f['opts'] %}
+        <div style="margin-top:22px">
+            <div class="seclabel" style="margin-bottom:10px">Options</div>
+            <div style="display:flex; flex-wrap:wrap; gap:7px; opacity:.6">
+                {% for o in f['opts'] %}
+                <span class="badge-state" style="color:rgba(233,233,237,.6); background:rgba(233,233,237,.06); border:1px solid var(--color-divider); padding:4px 11px">{{ o }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="cmd" style="margin-top:22px; width:100%; box-sizing:border-box">
+            <span class="dollar">$</span><span class="tool" style="color:{{ f['hue'] }}">{{ f['cmd_head'] }}</span>
+            <span class="muted" style="color:rgba(233,233,237,.72)">{{ f['cmd_rest'] }}</span>
+        </div>
+
+        {% if f['needs_key'] %}
+        <div style="display:flex; gap:10px; margin-top:16px; padding:11px 13px; border-radius:6px;
+             border:1px solid color-mix(in srgb,#e0a03a 30%,transparent); background:color-mix(in srgb,#e0a03a 7%,transparent)">
+            <i class="ph ph-key" style="font-size:15px; color:#f0c076; margin-top:1px"></i>
+            <p style="margin:0; font-size:11.5px; line-height:1.65; color:rgba(233,233,237,.55)">{{ f['key_note'] }}</p>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; gap:8px; margin-top:26px">
+            <button class="cbtn cbtn-primary" type="button" disabled style="opacity:.5; cursor:not-allowed"><i class="ph ph-play"></i>Run task</button>
+            <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=project['id']) }}">Back to project</a>
+        </div>
+    </div>
+    {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/scan-fields.js', v=asset_version) }}"></script>
+<script>
+(function () {
+    var picks = document.querySelectorAll(".tool-pick");
+    var panels = document.querySelectorAll(".tool-panel");
+    function select(tool) {
+        panels.forEach(function (p) { p.classList.toggle("hidden", p.dataset.tool !== tool); });
+        picks.forEach(function (b) {
+            var on = b.dataset.tool === tool;
+            b.style.borderBottomColor = on ? b.dataset.hue : "transparent";
+            b.style.background = on ? "rgba(233,233,237,.05)" : "transparent";
+            var nm = b.querySelector(".tool-pick-name");
+            if (nm) { nm.style.color = on ? "var(--color-text)" : "rgba(233,233,237,.6)"; }
+        });
+        try { history.replaceState(null, "", "?tool=" + tool); } catch (e) {}
+    }
+    picks.forEach(function (b) { b.addEventListener("click", function () { select(b.dataset.tool); }); });
+    select({{ tool|tojson }});
+})();
+</script>
+{% endblock %}

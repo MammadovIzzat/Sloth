@@ -83,10 +83,14 @@
                 {% for t in sidebar_tasks %}
                 <a href="{{ url_for('scan.task_detail', task_id=t['id']) }}"
                    class="ctx-task {{ 'on' if t['id'] == current_task_id }}">
-                    <div class="t">{{ t['target'] }}</div>
+                    <div class="t"><i class="ph ph-crosshair" style="font-size:11px; margin-right:5px; opacity:.6"></i>{{ t['target'] }}</div>
                     <div class="m">{{ t['host_count'] }} hosts · {{ t['finding_count'] }} ports</div>
                 </a>
                 {% endfor %}
+                <a href="{{ url_for('projects.new_task', project_id=current_project_id) }}"
+                   class="ctx-task" style="color:rgba(233,233,237,.4); font-size:12px">
+                    <div class="t" style="color:rgba(233,233,237,.5)"><i class="ph ph-plus" style="font-size:11px; margin-right:5px"></i>New task</div>
+                </a>
             </div>
             {% endif %}
         </div>

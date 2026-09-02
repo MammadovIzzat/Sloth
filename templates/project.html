@@ -26,7 +26,7 @@
             <button class="cbtn" data-dialog-open="dlg-export"><i class="ph ph-download-simple"></i>Export</button>
             <button class="cbtn" data-dialog-open="dlg-import"><i class="ph ph-upload-simple"></i>Import</button>
             <button class="cbtn cbtn-icon" data-dialog-open="dlg-settings" title="Settings"><i class="ph ph-gear" style="font-size:16px"></i></button>
-            <button class="cbtn cbtn-primary" data-dialog-open="dlg-task"><i class="ph ph-plus"></i>New scan task</button>
+            <a class="cbtn cbtn-primary" href="{{ url_for('projects.new_task', project_id=project['id']) }}"><i class="ph ph-plus"></i>New task</a>
         </div>
     </div>
     {% if surface %}
@@ -118,7 +118,6 @@
 
 {% block dialogs %}
 {% include "_dialog_project.html" %}
-{% include "_dialog_task.html" %}
 {% set import_project = project %}
 {% include "_dialog_import.html" %}
 

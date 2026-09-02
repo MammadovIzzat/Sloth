@@ -145,6 +145,9 @@ def create_app():
     app.jinja_env.globals["surface_summary"] = surface_summary
     app.jinja_env.globals["app_version"] = __version__
 
+    from .formats import TASK_FORMATS
+    app.jinja_env.globals["task_formats"] = TASK_FORMATS
+
     @app.before_request
     def _check_csrf():
         """Blocks cross-site POSTs without breaking scripted access.

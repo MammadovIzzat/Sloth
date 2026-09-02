@@ -72,6 +72,32 @@ def project_detail(project_id):
     )
 
 
+@bp.route("/projects/<project_id>/new")
+def new_task(project_id):
+    """The New-task page: pick a tool format, then configure it. Only the host
+    scan is built; the rest render as 'coming soon' from the format registry."""
+    project = store.get_project(project_id)
+    if project is None:
+        abort(404)
+    return render_template(
+        "newtask.html",
+        nav_section="projects",
+        current_project_id=project_id,
+        current_project_name=project["name"],
+        sidebar_tasks=store.list_tasks(project_id),
+        project=project,
+        tool=request.args.get("tool", "host"),
+        scan_types=SCAN_TYPES,
+        engines=ENGINES,
+        quick_protocols=QUICK_PROTOCOLS,
+        discovery_profiles=profiles_for_ui(),
+        defaults={"tcp": DEFAULT_TCP_PORTS, "udp": DEFAULT_UDP_PORTS,
+                  "rate": DEFAULT_RATE, "top_ports": DEFAULT_TOP_PORTS,
+                  "discovery": DEFAULT_DISCOVERY, "retries": DEFAULT_RETRIES,
+                  "engine": DEFAULT_ENGINE},
+    )
+
+
 @bp.route("/projects/<project_id>/edit", methods=["POST"])
 def edit_project(project_id):
     if store.get_project(project_id) is None:
