@@ -6,14 +6,6 @@
 /* --- signed-out split screen ------------------------------------------- */
 
 .auth { display: flex; min-height: 100vh; }
-.auth-form { flex: 1; padding: clamp(24px, 5vw, 56px); }
-.auth-aside {
-  flex: 1;
-  border-left: 1px solid var(--color-divider);
-  background: linear-gradient(160deg,
-              color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 60%);
-  display: flex; align-items: flex-end; padding: var(--space-8);
-}
 .auth-aside p {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px; line-height: 1.8; max-width: 34ch;
@@ -25,13 +17,7 @@
 
 .brand { display: flex; align-items: center; gap: 10px; color: var(--color-text);
          text-decoration: none; }
-.brand-mark {
-  width: 24px; height: 24px; border-radius: 7px;
-  border: 1px solid var(--color-accent); display: grid; place-items: center;
-  color: var(--color-accent); font-size: 14px; flex: none;
-}
 .brand-word { font-family: var(--font-heading); font-size: 19px; letter-spacing: -0.02em; }
-.brand-lg { margin-bottom: 40px; }
 .brand-lg .brand-word { font-size: 23px; }
 
 /* --- signed-in shell ---------------------------------------------------- */
@@ -45,39 +31,22 @@
   border-right: 1px solid var(--color-divider); overflow: auto;
 }
 .main { flex: 1; min-width: 0; padding: var(--space-8) clamp(20px, 4vw, 44px) 80px; }
-
-.nav-stack { flex-direction: column; align-items: stretch; gap: 1px; padding: 0; }
 .nav-stack > a {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 9px; border-radius: var(--radius-md); font-size: 13px;
 }
 .nav-stack > a > i { font-size: 16px; }
 .nav-stack > a:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
-
-.side-group { display: flex; flex-direction: column; gap: var(--space-2); }
-.side-head { display: flex; align-items: center; justify-content: space-between; padding: 0 9px; }
 .side-head h6 { margin: 0; font-size: 10px;
                 color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 .side-head a { font-size: 14px; display: flex; }
-.side-project { gap: 8px !important; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* A running scan pulses; everything else is a quiet dot. */
 .dot { width: 5px; height: 5px; border-radius: 50%; flex: none;
        background: color-mix(in srgb, var(--color-text) 30%, transparent); }
-.dot-live { background: var(--color-accent); animation: sloth-pulse 1.6s ease-in-out infinite; }
 @keyframes sloth-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-
-.side-foot {
-  margin-top: auto; display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; padding-top: var(--space-4); border-top: 1px solid var(--color-divider);
-}
-.side-user { display: flex; align-items: center; gap: 8px; font-size: 13px;
-             color: var(--color-text); }
 .side-user > i { font-size: 15px; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
-.icon-link { background: none; border: 0; cursor: pointer; font-size: 15px; display: flex;
-             padding: 0; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
-.icon-link:hover { color: var(--color-accent); }
 
 /* --- page header -------------------------------------------------------- */
 
@@ -89,9 +58,7 @@
 .page-head h3 { margin: 0 0 4px; }
 .page-head .sub { margin: 0; font-size: 13px;
                   color: color-mix(in srgb, var(--color-text) 55%, transparent); }
-.page-actions { display: flex; gap: var(--space-2); flex: none; flex-wrap: wrap; }
 .wrap { max-width: 1080px; }
-.stack { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* --- flash messages ----------------------------------------------------- */
 
@@ -116,8 +83,6 @@
               background: color-mix(in srgb, #3fb984 14%, transparent); color: #7fd8b0; }
 .tag-bad    { border-color: color-mix(in srgb, #f2555a 45%, transparent);
               background: color-mix(in srgb, #f2555a 14%, transparent); color: #ffb4b6; }
-.tag-busy   { border-color: color-mix(in srgb, #a67ce8 45%, transparent);
-              background: color-mix(in srgb, #a67ce8 14%, transparent); color: #cbb0f5; }
 
 /* Ports follow the design: a neutral pill, the port number in accent, the
    service muted beside it. Red was mine and it made every result look alarming
@@ -127,8 +92,6 @@
   font-size: 11px;
   gap: 5px;
 }
-.port-num { color: var(--color-accent-300); }
-.port-svc { opacity: 0.75; }
 /* Filtered is real information the design didn't model; keep it in the same
    pill, just quieter. */
 .port-filtered { opacity: 0.62; }
@@ -137,24 +100,14 @@
 /* --- host results ------------------------------------------------------- */
 
 .host-ip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
-.host-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.host-card-head { display: flex; align-items: center; justify-content: space-between;
-                  gap: var(--space-3); flex-wrap: wrap; margin-bottom: 12px; }
 .host-empty { font-size: 12px; font-style: italic;
               color: color-mix(in srgb, var(--color-text) 45%, transparent); }
-.card-scanning { box-shadow: 0 0 0 1px color-mix(in srgb, #e0a03a 55%, transparent); }
-.card-rescanning { box-shadow: 0 0 0 1px color-mix(in srgb, #a67ce8 55%, transparent); }
-.card-failed { box-shadow: 0 0 0 1px color-mix(in srgb, #f2555a 55%, transparent); }
 
 /* --- progress ----------------------------------------------------------- */
 
 .progress-meta { display: flex; justify-content: space-between; font-size: 11.5px;
                  color: color-mix(in srgb, var(--color-text) 50%, transparent);
                  margin-bottom: 6px; }
-.progress-track { height: 5px; border-radius: 999px; overflow: hidden;
-                  background: color-mix(in srgb, var(--color-text) 10%, transparent); }
-.progress-bar { height: 100%; border-radius: 999px; background: var(--color-accent);
-                transition: width 0.5s ease; }
 
 /* --- scanner log -------------------------------------------------------- */
 
@@ -172,29 +125,16 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
-.split { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; }
 /* Lower bases than the design's 440/280: those only stay side by side above
    ~740px of content width, and below that the log wraps under the table as a
    full-width stub with dead space beside it. */
 .split > .split-main { flex: 3 1 360px; min-width: 0; }
-.split > .split-aside {
-  flex: 1 1 240px; min-width: 0;
-  display: flex; flex-direction: column; gap: var(--space-4);
-  /* Follows you down a long results table, and is its own scroll container
-     bounded to the viewport — so the Nmap reports at the bottom of the rail are
-     always reachable without scrolling the whole page down past every result. */
-  position: sticky; top: var(--space-4);
-  max-height: calc(100vh - 2 * var(--space-4));
-  overflow-y: auto;
-}
 @media (max-width: 900px) { .split > .split-aside { position: static; max-height: none; overflow: visible; } }
 
 /* The log is the column's reason to exist — let it fill the space rather than
    sitting as a short card with emptiness under it. */
 .log-card { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .log-card .log { flex: 1 1 auto; min-height: 160px; max-height: min(42vh, 380px); }
-.log-head { display: flex; align-items: center; justify-content: space-between;
-            gap: var(--space-2); margin-bottom: 10px; }
 .hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.6;
         color: color-mix(in srgb, var(--color-text) 42%, transparent); }
 .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -213,20 +153,6 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
 #resultsTable[hidden], #resultsCards[hidden] { display: none; }
 
 .host-row td { vertical-align: middle; }
-.cell-ip   { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.cell-port { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-             color: var(--color-accent-300); }
-.cell-svc  { color: color-mix(in srgb, var(--color-text) 70%, transparent); font-size: 13px; }
-.cell-src  { font-size: 11px; color: color-mix(in srgb, var(--color-text) 40%, transparent); }
-
-.host-card { padding: var(--space-4) var(--space-6); gap: var(--space-4); }
-.host-head { display: flex; align-items: center; justify-content: space-between;
-             gap: var(--space-4); flex-wrap: wrap; }
-.host-id   { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.host-ip   { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
-.host-meta { font-size: 11px; color: color-mix(in srgb, var(--color-text) 40%, transparent); }
-.host-actions { display: flex; gap: var(--space-2); align-items: center;
-                flex-wrap: wrap; min-width: 0; }
 /* A select sizes itself to its widest option; without these it outgrows the
    card and paints over what is beside it. */
 .host-tool { width: auto; max-width: 100%; min-width: 0; min-height: 30px;
@@ -243,28 +169,16 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
                     margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6));
                     padding: var(--space-3) var(--space-6);
                     border-radius: var(--radius-md); transition: background .12s ease; }
-.host-head-toggle:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
-.card-caret { flex: none; font-size: 13px; line-height: 1;
-              color: color-mix(in srgb, var(--color-text) 45%, transparent);
-              transition: transform .15s ease; }
-.host-card:not(.collapsed) .card-caret { transform: rotate(90deg); }
-.host-count { font-size: 10.5px; padding: 1px 7px; letter-spacing: .01em;
-              color: color-mix(in srgb, var(--color-text) 55%, transparent); }
-.host-count:empty { display: none; }
 /* Collapsed: no gap below the header and no port block, so the card is one line. */
 .host-card.collapsed { gap: 0; }
-.host-card.collapsed .ports-container { display: none; }
 
 /* Filter + expand-all toolbar above the results. */
 .results-toolbar { display: flex; align-items: center; gap: var(--space-3);
                    margin-bottom: var(--space-4); flex-wrap: wrap; }
-.results-toolbar .result-search { flex: 1 1 240px; min-width: 0; }
 .results-toolbar #toggleAll { flex: none; }
 
 /* State lives on the card edge, not in a glow that shouts. */
 .card-scanning   { box-shadow: inset 2px 0 0 var(--color-accent); }
-.card-rescanning { box-shadow: inset 2px 0 0 #a67ce8; }
-.card-failed     { box-shadow: inset 2px 0 0 #f2555a; }
 
 /* --- tall dialogs -------------------------------------------------------- */
 /* Nocturne's dialog is sized for a short form — it has no height cap, and the
@@ -309,8 +223,6 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
    min-width:auto, which refuses to shrink below content — hence the explicit 0. */
 
 .host-card-head { min-width: 0; }
-.host-actions { min-width: 0; max-width: 100%; }
-.host-tool { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 
 #results[data-view="table"] .host-card-head > div { min-width: 0; }
 #results[data-view="table"] .host-actions { width: 100%; }
@@ -323,8 +235,6 @@ pre.raw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size
    which refuses to shrink below content — hence the explicit zeros. */
 
 .host-card-head { min-width: 0; }
-.host-actions { min-width: 0; max-width: 100%; }
-.host-tool { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 
 #results[data-view="table"] .host-card-head > div { min-width: 0; }
 #results[data-view="table"] .host-actions { width: 100%; }
@@ -378,42 +288,25 @@ input[type="file"].input::file-selector-button:hover {
           max-width: min(420px, calc(100vw - 2 * var(--space-6))); z-index: 60; }
 .toast  { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); align-items: flex-start; }
 .toast-text { min-width: 0; }
-
-.nav-badge { margin-left: auto; font-size: 11px; line-height: 1;
-             padding: 3px 7px; border-radius: 999px;
-             background: var(--color-accent); color: #0b101a; font-weight: 600; }
 .nav-badge.hidden { display: none; }
 
 /* --- logo --------------------------------------------------------------- */
 /* The artwork replaces the old glyph-in-a-box mark. Cut-out PNG, so no border
    or radius to soften a square. */
 .brand-logo { width: 30px; height: 30px; display: block; flex: none; }
-.brand-logo-lg { width: 72px; height: 72px; }
 
 /* --- active-rescans strip ----------------------------------------------- */
 /* Shown above the results in either view, so a running rescan always has a
    reachable Stop even when the (cards-only) per-host Stop is off-screen. */
 .rescan-strip { display: flex; flex-direction: column; gap: 6px; }
-.rescan-strip-row {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
-    padding: 9px var(--space-4);
-    border: 1px solid color-mix(in srgb, #a67ce8 45%, transparent);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, #a67ce8 8%, transparent);
-    font-size: 13px;
-}
 .rescan-strip-row b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .rescan-strip-row .dot { margin-right: 6px; }
-.rescan-strip-stop { flex: none; }
 
 /* --- rescan control in the table view ----------------------------------- */
 /* The same tool-picker + button used on the cards, one per host on its first
    row, so a rescan is reachable in the default table view too. Compact so the
    column stays narrow. */
 .cell-actions { white-space: nowrap; text-align: right; }
-.rescan-control { display: inline-flex; align-items: center; gap: 6px; }
-.rescan-control .host-tool { max-width: 190px; font-size: 12px; padding: 3px 6px; }
-.rescan-control .rescan-btn { padding: 4px 10px; white-space: nowrap; }
 td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 
 /* --- nmap reports list -------------------------------------------------- */
@@ -425,8 +318,6 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
    so the list looks empty. They must keep their line height and let the list
    scroll instead. */
 .nmap-entry { font-size: 12px; flex: none; }
-.nmap-sort { width: auto; min-height: 26px; font-size: 11px; padding: 2px 6px; }
-.nmap-search { min-height: 28px; font-size: 12px; padding: 4px 8px; }
 .report-empty { margin: 4px 2px 2px; font-size: 12px; line-height: 1.5;
                 color: color-mix(in srgb, var(--color-text) 50%, transparent); }
 .report-empty b { color: color-mix(in srgb, var(--color-text) 75%, transparent);
@@ -625,6 +516,7 @@ td.cell-actions { padding-top: 4px; padding-bottom: 4px; }
 .authv-host .dot2 { width:5px; height:5px; border-radius:50%; background:#3fb984; }
 .authv-body { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:28px 20px; }
 .authv-card { width:100%; max-width:352px; }
+.authv-logo { display:block; width:96px; height:96px; margin:0 auto 26px; }
 .authv-foot { flex:none; display:flex; align-items:center; gap:8px; padding:10px 20px;
               border-top:1px solid var(--color-divider); background:color-mix(in srgb, var(--color-bg) 55%, #000); }
 .authv-foot span { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:rgba(233,233,237,.45); }
