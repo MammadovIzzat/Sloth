@@ -6,14 +6,12 @@ lines to the task page. Network fetches use the stdlib so there is no extra
 dependency, with TLS verification relaxed because engagement targets routinely
 present self-signed or mismatched certificates.
 """
-import csv
 import json
 import os
 import re
 import shutil
 import ssl
 import subprocess
-import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -365,8 +363,20 @@ def _status_hue(status):
     return "rgba(233,233,237,.6)"
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+# dirsearch console line: "[12:34:56] 200 -    1KB - /admin"  (optionally "-> /admin/")
+_DIRSEARCH_LINE = re.compile(
+    r"(?:\[\d{2}:\d{2}:\d{2}\]\s*)?([1-5]\d{2})\s*-\s*(\S+)\s*-\s*(\S+)"
+    r"(?:\s*->\s*(?:REDIRECTS TO:\s*)?(\S+))?", re.I)
+
+
 def dirsearch_scan(url, params=None, log=_noop):
-    """Brute-force a web server's paths with the dirsearch CLI."""
+    """Brute-force a web server's paths with the dirsearch CLI.
+
+    Parses dirsearch's stdout rather than a report file, since the report flags
+    (`--format`, `--*-report`) differ between versions but the console output
+    ("[time] STATUS - SIZE - /path") is stable.
+    """
     params = params or {}
     url = (url or "").strip()
     if not url:
@@ -376,8 +386,7 @@ def dirsearch_scan(url, params=None, log=_noop):
     if shutil.which("dirsearch") is None:
         raise ScanError("dirsearch is not installed. `pipx install dirsearch`.")
 
-    out = os.path.join(tempfile.gettempdir(), "sloth-dirsearch-" + os.urandom(6).hex() + ".csv")
-    cmd = ["dirsearch", "-u", url, "--format=csv", "-o", out]
+    cmd = ["dirsearch", "-u", url]
     ext = (params.get("extensions") or "").strip()
     if ext:
         cmd += ["-e", ext]
@@ -395,28 +404,24 @@ def dirsearch_scan(url, params=None, log=_noop):
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     except subprocess.TimeoutExpired:
         raise ScanError("dirsearch timed out (15 min cap).")
-    if not os.path.exists(out):
-        err = (proc.stderr or proc.stdout or "").strip().splitlines()
-        raise ScanError("dirsearch produced no output: " + (err[-1] if err else "unknown error"))
 
-    rows = []
-    try:
-        with open(out, newline="") as fh:
-            for r in csv.DictReader(fh):
-                low = {(k or "").strip().lower(): (v or "").strip() for k, v in r.items()}
-                path = low.get("url") or low.get("path") or ""
-                status = low.get("status") or low.get("status code") or ""
-                size = low.get("content-length") or low.get("size") or low.get("length") or ""
-                redirect = low.get("redirection") or low.get("redirect") or ""
-                if not path:
-                    continue
-                rows.append({"url": path, "status": status, "size": size,
-                             "redirect": redirect, "hue": _status_hue(status)})
-    finally:
-        try:
-            os.remove(out)
-        except OSError:
-            pass
+    rows, seen = [], set()
+    for raw in (proc.stdout or "").splitlines():
+        line = _ANSI.sub("", raw).strip()
+        m = _DIRSEARCH_LINE.search(line)
+        if not m:
+            continue
+        status, size, path, redirect = m.groups()
+        full = path if path.lower().startswith("http") else urllib.parse.urljoin(url, path)
+        if full in seen:
+            continue
+        seen.add(full)
+        rows.append({"url": full, "status": status, "size": size,
+                     "redirect": redirect or "", "hue": _status_hue(status)})
+
+    if not rows and proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise ScanError("dirsearch failed: " + (err[-1] if err else "unknown error"))
 
     def band(pred):
         return sum(1 for r in rows if pred(r["status"]))
