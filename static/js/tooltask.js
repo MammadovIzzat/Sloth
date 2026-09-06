@@ -25,13 +25,23 @@
             .then(function (res) { if (!res.ok) { setStatus("error"); alert(res.d.error || "could not start"); } });
     }
 
+    var logEl = document.getElementById("toolLog");
+    function appendLog(line) {
+        if (!logEl) { return; }
+        var atBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 4;
+        logEl.textContent += line + "\n";
+        if (atBottom) { logEl.scrollTop = logEl.scrollHeight; }
+    }
+    if (logEl) { logEl.scrollTop = logEl.scrollHeight; }
+
     var source = new EventSource("/tasks/" + T.id + "/stream");
     source.onmessage = function (msg) {
         var ev = JSON.parse(msg.data);
+        if (ev.type === "log") { appendLog(ev.line); }
         if (ev.type === "status" && ev.status) { setStatus(ev.status); }
         if (ev.type === "done") {
             source.close();
-            location.reload();   // pull in the stored results
+            location.reload();   // pull in the stored, structured results
         }
     };
     source.onerror = function () { /* the stream stays flaky during restarts; ignore */ };

@@ -48,16 +48,23 @@
 {% endmacro %}
 
 {% macro empty(task) %}
-<div style="padding:56px 28px; text-align:center">
-    {% if task['status'] == 'running' %}
-    <p class="subline"><span class="dot2 live" style="background:#e0a03a; display:inline-block"></span>
-       Running — results will appear when it finishes.</p>
-    {% elif task['status'] == 'error' %}
-    <p class="subline" style="color:#ffb4b6">{{ task['error'] or 'The task failed. See the log.' }}</p>
-    {% else %}
-    <p class="subline">No results yet. Press <b>Run</b>.</p>
-    {% endif %}
+{% if task['status'] == 'running' %}
+<div class="view-scroll" style="padding:16px 24px">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px">
+        <span class="dot2 live" style="background:#e0a03a"></span>
+        <span class="seclabel">Running — live output</span>
+    </div>
+    <pre id="toolLog" class="console-log" style="margin:0; max-height:70vh; overflow:auto">{{ scan_log }}</pre>
 </div>
+{% elif task['status'] == 'error' %}
+<div style="padding:16px 24px">
+    <div class="seclabel" style="margin-bottom:8px; color:#ffb4b6">Failed</div>
+    <p class="subline" style="color:#ffb4b6; margin-bottom:12px">{{ task['error'] or 'The task failed. See the log.' }}</p>
+    <pre class="console-log" style="margin:0; max-height:60vh; overflow:auto">{{ scan_log }}</pre>
+</div>
+{% else %}
+<div style="padding:56px 28px; text-align:center"><p class="subline">No results yet. Press <b>Run</b>.</p></div>
+{% endif %}
 {% endmacro %}
 
 {% macro scripts(task, autostart) %}

@@ -12,6 +12,7 @@ import re
 import shutil
 import ssl
 import subprocess
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -400,28 +401,37 @@ def dirsearch_scan(url, params=None, log=_noop):
         pass
 
     log("$ " + " ".join(cmd))
+    log("dirsearch started — hits appear below as they are found…")
+    # Stream stdout so found paths show live rather than all at once at the end.
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, bufsize=1)
+    killer = threading.Timer(900, proc.kill)   # 15-min wall-clock cap even if silent
+    killer.start()
+    rows, seen, tail = [], set(), []
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-    except subprocess.TimeoutExpired:
-        raise ScanError("dirsearch timed out (15 min cap).")
+        for raw in proc.stdout:
+            line = _ANSI.sub("", raw).strip()
+            if not line:
+                continue
+            m = _DIRSEARCH_LINE.search(line)
+            if not m:
+                tail.append(line)          # keep last non-result lines for error reporting
+                del tail[:-5]
+                continue
+            status, size, path, redirect = m.groups()
+            full = path if path.lower().startswith("http") else urllib.parse.urljoin(url, path)
+            if full in seen:
+                continue
+            seen.add(full)
+            rows.append({"url": full, "status": status, "size": size,
+                         "redirect": redirect or "", "hue": _status_hue(status)})
+            log(f"{status}  {size or '-':>7}  {full}" + (f"  ->  {redirect}" if redirect else ""))
+    finally:
+        killer.cancel()
+    rc = proc.wait()
 
-    rows, seen = [], set()
-    for raw in (proc.stdout or "").splitlines():
-        line = _ANSI.sub("", raw).strip()
-        m = _DIRSEARCH_LINE.search(line)
-        if not m:
-            continue
-        status, size, path, redirect = m.groups()
-        full = path if path.lower().startswith("http") else urllib.parse.urljoin(url, path)
-        if full in seen:
-            continue
-        seen.add(full)
-        rows.append({"url": full, "status": status, "size": size,
-                     "redirect": redirect or "", "hue": _status_hue(status)})
-
-    if not rows and proc.returncode != 0:
-        err = (proc.stderr or proc.stdout or "").strip().splitlines()
-        raise ScanError("dirsearch failed: " + (err[-1] if err else "unknown error"))
+    if not rows and rc not in (0, None):
+        raise ScanError("dirsearch failed: " + (tail[-1] if tail else "unknown error"))
 
     def band(pred):
         return sum(1 for r in rows if pred(r["status"]))
