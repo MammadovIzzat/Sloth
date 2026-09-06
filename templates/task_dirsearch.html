@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_tool.html" as tool with context %}
+{% set fmt = format_by_id['dirsearch'] %}
+{% block title %}{{ task['target'] }} · directory search{% endblock %}
+
+{% block content %}
+{{ tool.head(task, fmt, task['target'], 'paths brute-forced under this URL',
+             '-u ' ~ task['target'] ~ (' -e ' ~ params['extensions'] if params.get('extensions') else '')) }}
+{% if result and result['rows'] %}
+<div class="results-bar">
+    <div class="csearch" style="flex:1 1 auto; max-width:380px">
+        <i class="ph ph-magnifying-glass"></i>
+        <input id="pFilter" type="search" autocomplete="off" placeholder="filter — /admin, 200, .php">
+    </div>
+    <span id="pCount" class="mono" style="font-size:11.5px; color:rgba(233,233,237,.42)">{{ result['count'] }} paths</span>
+</div>
+<div class="view-scroll">
+    <div class="colhead" style="gap:0"><span style="width:72px">Status</span><span style="flex:1">Path</span><span style="width:90px; text-align:right">Size</span></div>
+    {% for r in result['rows'] %}
+    <a href="{{ r['url'] }}" target="_blank" rel="noreferrer" class="lrow click drow"
+       data-hay="{{ (r['url'] ~ ' ' ~ r['status'])|lower }}"
+       style="padding:8px 24px; gap:0; border-left:2px solid {{ r['hue'] }}">
+        <span class="mono" style="width:72px; font-size:12.5px; color:{{ r['hue'] }}">{{ r['status'] }}</span>
+        <span class="mono" style="flex:1; min-width:0; font-size:12px; color:rgba(233,233,237,.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+            {{ r['url'] }}{% if r['redirect'] %} <span style="color:rgba(233,233,237,.35)">→ {{ r['redirect'] }}</span>{% endif %}</span>
+        <span class="mono" style="width:90px; text-align:right; font-size:11px; color:rgba(233,233,237,.35)">{{ r['size'] }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}{{ tool.empty(task) }}{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ tool.scripts(task, autostart) }}
+<script>
+(function () {
+    var box = document.getElementById("pFilter"); if (!box) { return; }
+    var rows = [].slice.call(document.querySelectorAll(".drow"));
+    var count = document.getElementById("pCount");
+    box.addEventListener("input", function () {
+        var q = box.value.trim().toLowerCase(), n = 0;
+        rows.forEach(function (r) { var hit = !q || r.dataset.hay.indexOf(q) !== -1;
+            r.style.display = hit ? "" : "none"; if (hit) { n++; } });
+        count.textContent = n + " paths";
+    });
+})();
+</script>
+{% endblock %}

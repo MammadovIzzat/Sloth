@@ -71,6 +71,20 @@ TASK_FORMATS = [
         ],
         "opts": ["Inline scripts", "External .js", "Source maps", "Comments only"],
     },
+    {
+        "id": "dirsearch", "name": "Directory search", "icon": "ph ph-tree-structure",
+        "hue": "#f0a878", "engine": "dirsearch",
+        "blurb": "Brute-force a web server's paths — the hidden directories and files a link crawl never sees.",
+        "coming_soon": False,
+        "cmd_head": "dirsearch", "cmd_rest": "-u https://acme.example -e php,html,js",
+        "fields": [
+            {"name": "target", "label": "Target URL", "ph": "https://acme.example", "hint": "The base URL to enumerate under.", "font": "mono", "span": "span 2"},
+            {"name": "extensions", "label": "Extensions", "ph": "php,html,js,txt", "hint": "Comma-separated; each word is tried with these.", "font": "mono", "span": "auto"},
+            {"name": "threads", "label": "Threads", "ph": "25", "hint": "", "font": "mono", "span": "auto"},
+            {"name": "wordlist", "label": "Wordlist", "ph": "default — dirsearch's built-in list", "hint": "Or a path on this host to your own wordlist.", "font": "mono", "span": "span 2"},
+        ],
+        "opts": [],
+    },
 ]
 
 FORMAT_BY_ID = {f["id"]: f for f in TASK_FORMATS}

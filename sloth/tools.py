@@ -6,12 +6,14 @@ lines to the task page. Network fetches use the stdlib so there is no extra
 dependency, with TLS verification relaxed because engagement targets routinely
 present self-signed or mismatched certificates.
 """
+import csv
 import json
 import os
 import re
 import shutil
 import ssl
 import subprocess
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -346,9 +348,101 @@ def source_enum(url, params=None, log=_noop):
     }
 
 
+# ── directory search (dirsearch) ───────────────────────────────────────────
+def _status_hue(status):
+    try:
+        s = int(status)
+    except (TypeError, ValueError):
+        return "rgba(233,233,237,.6)"
+    if 200 <= s < 300:
+        return "#7fd8b0"           # found
+    if 300 <= s < 400:
+        return "#8ab2f5"           # redirect
+    if s in (401, 403):
+        return "#f0c076"           # protected — often the interesting ones
+    if 500 <= s < 600:
+        return "#ffb4b6"           # error
+    return "rgba(233,233,237,.6)"
+
+
+def dirsearch_scan(url, params=None, log=_noop):
+    """Brute-force a web server's paths with the dirsearch CLI."""
+    params = params or {}
+    url = (url or "").strip()
+    if not url:
+        raise ScanError("A target URL is required.")
+    if not re.match(r"^https?://", url, re.I):
+        url = "https://" + url
+    if shutil.which("dirsearch") is None:
+        raise ScanError("dirsearch is not installed. `pipx install dirsearch`.")
+
+    out = os.path.join(tempfile.gettempdir(), "sloth-dirsearch-" + os.urandom(6).hex() + ".csv")
+    cmd = ["dirsearch", "-u", url, "--format=csv", "-o", out]
+    ext = (params.get("extensions") or "").strip()
+    if ext:
+        cmd += ["-e", ext]
+    wl = (params.get("wordlist") or "").strip()
+    if wl and wl.lower() != "default" and os.path.exists(wl):
+        cmd += ["-w", wl]
+    try:
+        threads = int(params.get("threads") or 25)
+        cmd += ["-t", str(max(1, min(100, threads)))]
+    except (TypeError, ValueError):
+        pass
+
+    log("$ " + " ".join(cmd))
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    except subprocess.TimeoutExpired:
+        raise ScanError("dirsearch timed out (15 min cap).")
+    if not os.path.exists(out):
+        err = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise ScanError("dirsearch produced no output: " + (err[-1] if err else "unknown error"))
+
+    rows = []
+    try:
+        with open(out, newline="") as fh:
+            for r in csv.DictReader(fh):
+                low = {(k or "").strip().lower(): (v or "").strip() for k, v in r.items()}
+                path = low.get("url") or low.get("path") or ""
+                status = low.get("status") or low.get("status code") or ""
+                size = low.get("content-length") or low.get("size") or low.get("length") or ""
+                redirect = low.get("redirection") or low.get("redirect") or ""
+                if not path:
+                    continue
+                rows.append({"url": path, "status": status, "size": size,
+                             "redirect": redirect, "hue": _status_hue(status)})
+    finally:
+        try:
+            os.remove(out)
+        except OSError:
+            pass
+
+    def band(pred):
+        return sum(1 for r in rows if pred(r["status"]))
+    def code(r, lo, hi):
+        try:
+            return lo <= int(r) < hi
+        except (TypeError, ValueError):
+            return False
+    log(f"{len(rows)} path(s) found")
+    return {
+        "rows": rows,
+        "metrics": [
+            {"v": len(rows), "label": "paths found", "hue": "#f0a878"},
+            {"v": band(lambda s: code(s, 200, 300)), "label": "200 OK", "hue": "#7fd8b0"},
+            {"v": band(lambda s: code(s, 300, 400)), "label": "redirects", "hue": "#8ab2f5"},
+            {"v": band(lambda s: s in ("401", "403")), "label": "protected", "hue": "#f0c076"},
+            {"v": band(lambda s: code(s, 500, 600)), "label": "server errors", "hue": "#ffb4b6"},
+        ],
+        "count": len(rows),
+    }
+
+
 RUNNERS = {
     "shodan": shodan_domain,
     "archive": archive_urls,
     "headers": header_check,
     "source": source_enum,
+    "dirsearch": dirsearch_scan,
 }
