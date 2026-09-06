@@ -89,9 +89,15 @@ def start_task(task_id):
     resume = (request.args.get("resume") or "").lower() in ("1", "true", "yes")
     resume = resume or bool(payload.get("resume"))
 
-    # Tool tasks (shodan/archive/headers/source) carry no scan config — just run.
+    # Tool tasks (shodan/archive/headers/source/dirsearch): options may be edited
+    # before a re-run; persist them, then run.
     fmt = task["format"] if "format" in task.keys() else "host"
     if fmt and fmt != "host":
+        opts = payload.get("params") if isinstance(payload.get("params"), dict) else None
+        if opts:
+            import json as _json
+            store.update_task(task_id, params_json=_json.dumps(
+                {k: v for k, v in opts.items() if k != "target"}))
         try:
             manager.start(task_id)
         except ScanBusy as exc:

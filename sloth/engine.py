@@ -395,6 +395,7 @@ class ScanManager:
             existing = self._threads.get(task_id)
             if existing and existing.is_alive():
                 raise ScanBusy("This task is already running.")
+            self._stopping.discard(task_id)   # fresh run — clear any prior stop
 
         store.update_task(task_id, status="running", started_at=now(),
                           finished_at=None, error=None, progress=0.0)
@@ -411,17 +412,27 @@ class ScanManager:
                 if runner is None:
                     raise ScanError(f"Unknown task format: {fmt}")
                 self.log(task_id, f"Starting {fmt} task.")
+                # Tools that shell out get a registry-backed spawn + a cancel check
+                # so the Stop button can actually kill them.
+                extra = {"spawn": lambda cmd, **kw: registry.spawn(task_id, cmd, **kw),
+                         "cancelled": lambda: task_id in self._stopping}
                 if fmt == "headers":
                     raw = (params.get("endpoints") or "").strip()
                     eps = [ln.strip() for ln in raw.splitlines() if ln.strip()] \
                         if raw else self._derive_endpoints(task["project_id"])
                     result = runner(eps, params, log=lambda ln: self.log(task_id, ln))
+                elif fmt == "dirsearch":
+                    result = runner(task["target"], params,
+                                    log=lambda ln: self.log(task_id, ln), **extra)
                 else:
                     result = runner(task["target"], params, log=lambda ln: self.log(task_id, ln))
+                stopped = bool(result.get("stopped"))
+                status = "stopped" if stopped else "completed"
                 store.update_task(task_id, result_json=json.dumps(result),
-                                  status="completed", finished_at=now(), progress=100.0)
-                self.log(task_id, f"Done — {result.get('count', 0)} result(s).")
-                self.publish(task_id, {"type": "done", "status": "completed"})
+                                  status=status, finished_at=now(), progress=100.0)
+                self.log(task_id, ("Stopped — " if stopped else "Done — ")
+                         + f"{result.get('count', 0)} result(s).")
+                self.publish(task_id, {"type": "done", "status": status})
             except (ScanError, OSError) as exc:
                 store.update_task(task_id, status="error", error=str(exc), finished_at=now())
                 self.log(task_id, "[!] " + str(exc))
@@ -434,6 +445,7 @@ class ScanManager:
             finally:
                 with self._lock:
                     self._threads.pop(task_id, None)
+                    self._stopping.discard(task_id)
 
         thread = threading.Thread(target=worker, name=f"tool-{task_id}", daemon=True)
         with self._lock:

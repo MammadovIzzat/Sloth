@@ -24,8 +24,13 @@
             </div>
             {% endif %}
         </div>
-        <div style="display:flex; gap:8px; flex:none; padding-top:4px">
-            <button id="runBtn" class="cbtn {{ 'hidden' if task['status'] == 'running' }}"><i class="ph ph-arrows-clockwise"></i>{{ 'Run' if not task['result_json'] else 'Re-run' }}</button>
+        <div style="display:flex; gap:8px; flex:none; padding-top:4px; flex-wrap:wrap; justify-content:flex-end">
+            {% set editable = fmt['fields']|selectattr('name','ne','target')|list %}
+            {% if editable %}
+            <button id="optBtn" class="cbtn"><i class="ph ph-sliders-horizontal"></i>Options</button>
+            {% endif %}
+            <button id="runBtn" class="cbtn cbtn-accent {{ 'hidden' if task['status'] == 'running' }}"><i class="ph ph-play"></i>{{ 'Run' if not task['result_json'] else 'Re-run' }}</button>
+            <button id="stopBtn" class="cbtn cbtn-danger {{ '' if task['status'] == 'running' else 'hidden' }}"><i class="ph ph-stop"></i>Stop</button>
             <a class="cbtn" href="{{ url_for('projects.project_detail', project_id=task['project_id']) }}"><i class="ph ph-arrow-left"></i>Project</a>
             <form method="post" action="{{ url_for('projects.delete_task', task_id=task['id']) }}"
                   onsubmit="return confirm('Delete this task and its results?')">
@@ -34,6 +39,29 @@
             </form>
         </div>
     </div>
+
+    {% if editable %}
+    {# Edit the tool's options and re-run against the same target. #}
+    <div id="optForm" class="hidden" style="margin-top:14px; padding:14px; border:1px solid var(--color-divider);
+         border-radius:8px; background:color-mix(in srgb, var(--color-bg) 60%, #000)">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px 18px">
+            {% for f in editable %}
+            {% set val = params.get(f['name'], '') %}
+            <div style="grid-column:{{ f['span'] }}; min-width:0">
+                <label class="cfield-label" for="opt-{{ f['name'] }}">{{ f['label'] }}</label>
+                {% if f.get('textarea') %}
+                <textarea id="opt-{{ f['name'] }}" data-opt="{{ f['name'] }}" class="cinput" rows="3" placeholder="{{ f['ph'] }}">{{ val }}</textarea>
+                {% else %}
+                <input id="opt-{{ f['name'] }}" data-opt="{{ f['name'] }}" class="cinput {{ 'mono' if f['font'] == 'mono' }}"
+                       value="{{ val }}" placeholder="{{ f['ph'] }}">
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div style="margin-top:12px"><button id="optRun" class="cbtn cbtn-accent"><i class="ph ph-play"></i>Save &amp; re-run</button></div>
+    </div>
+    {% endif %}
+
     {% if result and result['metrics'] %}
     <div class="band">
         {% for m in result['metrics'] %}

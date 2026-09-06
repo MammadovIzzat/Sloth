@@ -371,13 +371,16 @@ _DIRSEARCH_LINE = re.compile(
     r"(?:\s*->\s*(?:REDIRECTS TO:\s*)?(\S+))?", re.I)
 
 
-def dirsearch_scan(url, params=None, log=_noop):
+def dirsearch_scan(url, params=None, log=_noop, spawn=None, cancelled=None):
     """Brute-force a web server's paths with the dirsearch CLI.
 
     Parses dirsearch's stdout rather than a report file, since the report flags
     (`--format`, `--*-report`) differ between versions but the console output
-    ("[time] STATUS - SIZE - /path") is stable.
+    ("[time] STATUS - SIZE - /path") is stable. `spawn` (from the engine) launches
+    the process through the registry so a Stop can kill it; `cancelled` reports
+    when the user asked to stop.
     """
+    cancelled = cancelled or (lambda: False)
     params = params or {}
     url = (url or "").strip()
     if not url:
@@ -403,13 +406,19 @@ def dirsearch_scan(url, params=None, log=_noop):
     log("$ " + " ".join(cmd))
     log("dirsearch started — hits appear below as they are found…")
     # Stream stdout so found paths show live rather than all at once at the end.
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            text=True, bufsize=1)
+    if spawn is not None:
+        proc = spawn(cmd, stderr=subprocess.STDOUT)   # tracked → a Stop can kill it
+    else:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, bufsize=1)
     killer = threading.Timer(900, proc.kill)   # 15-min wall-clock cap even if silent
     killer.start()
     rows, seen, tail = [], set(), []
     try:
         for raw in proc.stdout:
+            if cancelled():
+                proc.kill()
+                break
             line = _ANSI.sub("", raw).strip()
             if not line:
                 continue
@@ -429,8 +438,8 @@ def dirsearch_scan(url, params=None, log=_noop):
     finally:
         killer.cancel()
     rc = proc.wait()
-
-    if not rows and rc not in (0, None):
+    stopped = cancelled()
+    if not rows and not stopped and rc not in (0, None):
         raise ScanError("dirsearch failed: " + (tail[-1] if tail else "unknown error"))
 
     def band(pred):
@@ -440,7 +449,7 @@ def dirsearch_scan(url, params=None, log=_noop):
             return lo <= int(r) < hi
         except (TypeError, ValueError):
             return False
-    log(f"{len(rows)} path(s) found")
+    log(("stopped — " if stopped else "") + f"{len(rows)} path(s) found")
     return {
         "rows": rows,
         "metrics": [
@@ -451,6 +460,7 @@ def dirsearch_scan(url, params=None, log=_noop):
             {"v": band(lambda s: code(s, 500, 600)), "label": "server errors", "hue": "#ffb4b6"},
         ],
         "count": len(rows),
+        "stopped": stopped,
     }
 
 
